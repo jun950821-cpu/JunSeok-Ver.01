@@ -51,81 +51,104 @@ def get_top_3_by_difficulty(ranking_list, diff_name):
 st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
 
 # ==========================================
-# 🎨 오락실 테마 CSS 스타일링 
+# 🎨 [세련된 모던 레트로] 가독성 최적화 CSS 
 # ==========================================
 st.markdown("""
     <style>
-        /* 1. 레트로 픽셀 폰트 불러오기 */
+        /* 1. 레트로 픽셀 폰트 & 모던 고딕 폰트 동시에 불러오기 */
         @import url('https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-        /* 2. Streamlit 전체 배경 강제 다크모드 적용 */
+        /* 2. 눈이 편안한 소프트 다크 그레이 배경 */
         [data-testid="stAppViewContainer"] {
-            background-color: #111111 !important;
+            background-color: #18181b !important;
         }
         [data-testid="stHeader"] {
             background-color: transparent !important;
         }
 
-        /* 3. 전체 폰트 및 기본 글씨 색상 (네온 그린) */
+        /* 3. 일반 글씨는 가독성 최고의 '프리텐다드' + 부드러운 라이트 그레이 색상 */
         html, body, p, span, div, label, li {
-            font-family: 'NeoDunggeunmo', sans-serif !important;
-            color: #39FF14 !important; 
+            font-family: 'Pretendard', sans-serif !important;
+            color: #d4d4d8 !important; 
+            font-size: 1.05rem !important;
+            font-weight: 400 !important;
         }
 
-        /* 4. 제목 네온사인 가독성 대폭 개선 */
+        /* 4. 제목과 특정 강조 부분만 '픽셀 폰트'로 감성 유지 */
+        h1, h2, h3, .stButton>button, strong {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+        }
+
+        /* 5. 은은한 파스텔 네온 타이틀 (눈부심 방지) */
         h1, h2, h3 {
-            color: #FFFFFF !important;
-            text-shadow: 0 0 5px #FF00FF, 0 0 10px #FF00FF, 0 0 20px #FF00FF !important;
+            color: #fdfa72 !important; /* 소프트 옐로우 */
+            text-shadow: 0 0 5px rgba(253, 250, 114, 0.4) !important;
             text-align: center !important;
         }
+        h1 {
+            color: #f472b6 !important; /* 소프트 핑크 */
+            text-shadow: 0 0 8px rgba(244, 114, 182, 0.5) !important;
+        }
 
-        /* 5. 게임 버튼 오락실 스타일 */
+        /* 6. 모던 레트로 스타일 버튼 */
         .stButton>button {
-            background-color: transparent !important;
-            color: #00FFFF !important;
-            border: 2px solid #00FFFF !important;
-            box-shadow: 0 0 5px #00FFFF !important;
-            font-family: 'NeoDunggeunmo', sans-serif !important;
+            background-color: #27272a !important;
+            color: #34d399 !important; /* 소프트 형광 그린 */
+            border: 2px solid #34d399 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
             transition: all 0.2s ease-in-out;
             width: 100%;
         }
         .stButton>button:hover {
-            background-color: #00FFFF !important;
-            color: #000000 !important;
-            box-shadow: 0 0 15px #00FFFF !important;
+            background-color: #34d399 !important;
+            color: #18181b !important;
+            box-shadow: 0 0 12px rgba(52, 211, 153, 0.6) !important;
+            transform: scale(1.02);
         }
 
-        /* 6. 입력창 가독성 개선 */
+        /* 7. 입력창 디자인 (카드형 가독성) */
         .stTextInput input, .stNumberInput input {
-            background-color: #222222 !important;
-            color: #39FF14 !important;
-            border: 1px solid #39FF14 !important;
-            font-family: 'NeoDunggeunmo', sans-serif !important;
+            background-color: #27272a !important;
+            color: #34d399 !important;
+            border: 1px solid #52525b !important;
+            border-radius: 6px !important;
+            font-family: 'Pretendard', sans-serif !important;
         }
         input::placeholder {
-            color: #888888 !important; 
+            color: #71717a !important; 
         }
 
-        /* 7. 점선 구분선 */
-        hr {
-            border-bottom: 2px dashed #FF00FF !important;
-        }
-        
-        /* 8. UP/DOWN 결과 알림창 가독성 완벽 개선 */
+        /* 8. 결과 알림창 (가독성 높은 딥 인디고 카드 디자인) */
         [data-testid="stAlert"] {
-            background-color: #000000 !important; 
-            border: 2px solid #FFD700 !important; 
-            box-shadow: 0 0 10px #FFD700 !important; 
+            background-color: #1e1b4b !important; 
+            border: 1px solid #6366f1 !important; 
+            border-radius: 10px !important;
         }
-        [data-testid="stAlert"] p, [data-testid="stAlert"] span, [data-testid="stAlert"] div {
-            color: #FFFFFF !important; 
-            font-size: 1.15rem !important; 
+        [data-testid="stAlert"] * {
+            color: #e0e7ff !important; 
+            font-family: 'Pretendard', sans-serif !important;
+            font-weight: 500 !important;
+        }
+
+        /* 9. 방명록 등 폼 영역 (카드 UI) */
+        [data-testid="stForm"] {
+            background-color: #1f1f22 !important;
+            border: 1px solid #3f3f46 !important;
+            border-radius: 12px !important;
+            padding: 20px !important;
+        }
+
+        /* 10. 구분선 */
+        hr {
+            border-bottom: 2px dashed #52525b !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#00FFFF;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#34d399; font-weight:600;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
 
 
 # --- 🧠 기억 상자(세션) 초기화 ---
@@ -293,9 +316,9 @@ if st.session_state.game_started and not st.session_state.game_over:
         else:
             st.caption("대기 중...")
             
-        # 💡 [핵심 업데이트] 개발자 전용 이스터에그 (치트키)
+        # 개발자 전용 이스터에그 (치트키)
         if st.session_state.nickname == "KimJunSeok":
-            st.markdown(f"<div style='text-align: right; color: #FF00FF; font-size: 0.8rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: right; color: #f472b6; font-size: 0.85rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 3단계: 게임 종료 화면
@@ -305,7 +328,7 @@ if st.session_state.game_over:
         st.balloons() 
         st.snow()     
         
-    st.success(st.session_state.message)
+    st.warning(st.session_state.message)
     st.info(f"▶ LOG 데이터: {', '.join(map(str, st.session_state.history))}")
     
     st.divider()
