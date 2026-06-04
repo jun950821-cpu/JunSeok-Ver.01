@@ -3,29 +3,45 @@ import random
 import json
 import os
 
-# --- 💾 랭킹 및 방명록 데이터 저장/불러오기 ---
+# --- 💾 랭킹 및 방명록 데이터 저장/불러오기 (안전 가드 추가) ---
 RANKING_FILE = "ranking.json"
 CHAT_FILE = "chat.json"
 
 def load_ranking():
     if os.path.exists(RANKING_FILE):
-        with open(RANKING_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(RANKING_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 💡 예전 깨진 코드 때문에 잘못 저장된 유효하지 않은 데이터는 자동으로 걸러냅니다.
+                return [r for r in data if isinstance(r, dict) and "nickname" in r and "attempts" in r]
+        except Exception:
+            return []
     return []
 
 def save_ranking(ranking_list):
-    with open(RANKING_FILE, "w", encoding="utf-8") as f:
-        json.dump(ranking_list, f, ensure_ascii=False, indent=4)
+    try:
+        with open(RANKING_FILE, "w", encoding="utf-8") as f:
+            json.dump(ranking_list, f, ensure_ascii=False, indent=4)
+    except Exception:
+        pass
 
 def load_chat():
     if os.path.exists(CHAT_FILE):
-        with open(CHAT_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(CHAT_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 💡 방명록도 깨진 데이터가 있다면 안전하게 걸러냅니다.
+                return [c for c in data if isinstance(c, dict) and "name" in c and "msg" in c]
+        except Exception:
+            return []
     return []
 
 def save_chat(chat_list):
-    with open(CHAT_FILE, "w", encoding="utf-8") as f:
-        json.dump(chat_list, f, ensure_ascii=False, indent=4)
+    try:
+        with open(CHAT_FILE, "w", encoding="utf-8") as f:
+            json.dump(chat_list, f, ensure_ascii=False, indent=4)
+    except Exception:
+        pass
 
 
 # --- 🎮 웹페이지 기본 설정 ---
@@ -129,3 +145,63 @@ if st.session_state.game_started and not st.session_state.game_over:
         if st.session_state.history:
             for idx, num in enumerate(st.session_state.history):
                 st.write(f"{idx+1}회차: **{num}**")
+        else:
+            st.caption("아직 입력한 숫자가 없습니다.")
+
+# ==========================================
+# 3단계: 게임 종료 화면 (✨이펙트 상시 대기)
+# ==========================================
+if st.session_state.game_over:
+    st.balloons() # 🎈 축하 풍선 이펙트 실행
+    st.snow()     # ❄️ 눈꽃 이펙트 동시 실행
+    st.success(st.session_state.message)
+    st.info(f"내가 입력했던 숫자들: {', '.join(map(str, st.session_state.history))}")
+    
+    st.divider()
+    st.subheader("🏆 명예의 전당 (Top 5) 🏆")
+    
+    ranking = load_ranking()
+    for i, record in enumerate(ranking[:5]):
+        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "🏅"
+        st.write(f"**{medal} {i+1}위:** {record['nickname']}님 ({record['attempts']}번 시도)")
+
+    st.divider()
+    
+    if st.button("다른 닉네임으로 다시 도전하기"):
+        st.session_state.game_started = False
+        st.rerun()
+
+
+# ==========================================
+# 4단계: 한 줄 방명록 섹션 (화면 맨 아래 항상 노출)
+# ==========================================
+st.divider()
+st.subheader("💬 J.S.Kim의 게임 방명록")
+
+with st.form("chat_form", clear_on_submit=True):
+    if st.session_state.game_started:
+        author_name = st.session_state.nickname
+        st.text(f"✍️ 작성자: {author_name} (게임 참가 중)")
+    else:
+        author_name = st.text_input("닉네임", max_chars=10, placeholder="이름")
+
+    chat_message = st.text_input("응원 한 마디를 남겨주세요!", max_chars=100, placeholder="재밌네요! 등등")
+    submit_btn = st.form_submit_button("댓글 달기")
+
+    if submit_btn:
+        if not author_name.strip():
+            st.error("닉네임을 입력해 주세요!")
+        elif not chat_message.strip():
+            st.error("내용을 입력해 주세요!")
+        else:
+            current_chats = load_chat()
+            current_chats.append({"name": author_name, "msg": chat_message})
+            save_chat(current_chats)
+            st.rerun()
+
+saved_chats = load_chat()
+if saved_chats:
+    for chat in reversed(saved_chats[-10:]):
+        st.write(f"**{chat['name']}** : {chat['msg']}")
+else:
+    st.caption("아직 작성된 메시지가 없습니다. 첫 번째 발자취를 남겨보세요!")
