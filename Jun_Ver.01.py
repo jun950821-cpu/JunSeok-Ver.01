@@ -67,9 +67,9 @@ if st.session_state.game_started and not st.session_state.game_over:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        guess = st.number_input("숫자를 입력하세요 (1~100):", min_value=1, max_value=100, value=50, step=1)
+        # 💡 [모바일 최적화 핵심] 입력창 대신 손가락으로 미는 슬라이더로 교체!
+        guess = st.slider("💡 숫자를 선택하세요 (1~100):", min_value=1, max_value=100, value=50)
         
-        # 버튼들을 깔끔하게 배치하기 위한 서브 컬럼
         btn_col1, btn_col2 = st.columns(2)
         
         with btn_col1:
@@ -94,11 +94,10 @@ if st.session_state.game_started and not st.session_state.game_over:
                     st.rerun()
                     
         with btn_col2:
-            # 💡 [핵심 추가] 게임 도중 언제든 리셋할 수 있는 버튼입니다.
             if st.button("🔄 현재 게임 리셋", use_container_width=True):
-                st.session_state.secret_number = random.randint(1, 100) # 새 숫자 뽑기
-                st.session_state.attempts = 0                            # 시도 횟수 리셋
-                st.session_state.history = []                            # 히스토리 비우기
+                st.session_state.secret_number = random.randint(1, 100)
+                st.session_state.attempts = 0
+                st.session_state.history = []
                 st.session_state.message = f"🔄 게임이 리셋되었습니다! **{st.session_state.nickname}**님, 새로운 숫자를 맞춰보세요."
                 st.rerun()
                 
@@ -124,7 +123,7 @@ if st.session_state.game_over:
     ranking = load_ranking()
     for i, record in enumerate(ranking[:5]):
         medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "🏅"
-        st.write(f"**{medal} {i+1}위:** {record['nickname']}님 ({record['attempts']}번 시도)")
+        st.write(f"**{medal} {i+1}위:** {record['nickname']} network ({record['attempts']}번 시도)")
 
     st.divider()
     
