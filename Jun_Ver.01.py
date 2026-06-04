@@ -51,16 +51,16 @@ def get_top_3_by_difficulty(ranking_list, diff_name):
 st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
 
 # ==========================================
-# 🎨 [가독성 개선] 오락실 테마 CSS 스타일링 
+# 🎨 오락실 테마 CSS 스타일링 
 # ==========================================
 st.markdown("""
     <style>
         /* 1. 레트로 픽셀 폰트 불러오기 */
         @import url('https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css');
 
-        /* 2. Streamlit 전체 배경 강제 다크모드 적용 (가장 중요!) */
+        /* 2. Streamlit 전체 배경 강제 다크모드 적용 */
         [data-testid="stAppViewContainer"] {
-            background-color: #111111 !important; /* 진한 검정색 배경 */
+            background-color: #111111 !important;
         }
         [data-testid="stHeader"] {
             background-color: transparent !important;
@@ -74,8 +74,8 @@ st.markdown("""
 
         /* 4. 제목 네온사인 가독성 대폭 개선 */
         h1, h2, h3 {
-            color: #FFFFFF !important; /* 글씨 본체는 흰색으로 선명하게 */
-            text-shadow: 0 0 5px #FF00FF, 0 0 10px #FF00FF, 0 0 20px #FF00FF !important; /* 외곽선만 자주색 빛남 */
+            color: #FFFFFF !important;
+            text-shadow: 0 0 5px #FF00FF, 0 0 10px #FF00FF, 0 0 20px #FF00FF !important;
             text-align: center !important;
         }
 
@@ -98,11 +98,10 @@ st.markdown("""
         /* 6. 입력창 가독성 개선 */
         .stTextInput input, .stNumberInput input {
             background-color: #222222 !important;
-            color: #39FF14 !important; /* 타이핑하는 글씨는 네온그린 */
+            color: #39FF14 !important;
             border: 1px solid #39FF14 !important;
             font-family: 'NeoDunggeunmo', sans-serif !important;
         }
-        /* 입력창 안의 흐릿한 안내 문구 색상 조절 */
         input::placeholder {
             color: #888888 !important; 
         }
@@ -111,10 +110,20 @@ st.markdown("""
         hr {
             border-bottom: 2px dashed #FF00FF !important;
         }
+        
+        /* 💡 [신규 패치] 8. UP/DOWN 결과 알림창 가독성 완벽 개선 */
+        [data-testid="stAlert"] {
+            background-color: #000000 !important; /* 배경을 가장 어두운 검정으로 */
+            border: 2px solid #FFD700 !important; /* 테두리는 눈에 확 띄는 골드(노랑) 색상 */
+            box-shadow: 0 0 10px #FFD700 !important; /* 약간의 네온 빛 추가 */
+        }
+        [data-testid="stAlert"] p, [data-testid="stAlert"] span, [data-testid="stAlert"] div {
+            color: #FFFFFF !important; /* 안의 글씨는 모두 가장 밝은 흰색으로 강제 적용 */
+            font-size: 1.15rem !important; /* 글씨 크기 15% 확대 */
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# 💡 타이틀 출력
 st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#00FFFF;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
 
@@ -262,7 +271,7 @@ if st.session_state.game_started and not st.session_state.game_over:
 if st.session_state.game_over:
     st.balloons() 
     st.snow()     
-    st.warning(st.session_state.message)
+    st.success(st.session_state.message)
     st.info(f"▶ LOG 데이터: {', '.join(map(str, st.session_state.history))}")
     
     st.divider()
