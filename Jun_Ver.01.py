@@ -151,7 +151,6 @@ if not st.session_state.game_started:
         if nickname.strip() == "":
             st.warning("⚠️ 닉네임 입력 에러! 동전을 다시 넣어주세요.")
         else:
-            # 💡 [신규 패치] 난이도별 HP 세팅
             if "EASY" in selected_diff:
                 st.session_state.difficulty = "쉬움"
                 st.session_state.max_value = 50
@@ -236,7 +235,6 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.session_state.attempts += 1
                 st.session_state.history.append(guess)
                 
-                # 💡 [신규 패치] HP 차감 및 게임 오버 판정 로직
                 if guess < st.session_state.secret_number:
                     st.session_state.hp -= 1
                     if st.session_state.hp <= 0:
@@ -260,9 +258,8 @@ if st.session_state.game_started and not st.session_state.game_over:
                 else:
                     st.session_state.message = f"🎉 MISSION CLEAR! 정답: {st.session_state.secret_number} / 타격 횟수: {st.session_state.attempts}회"
                     st.session_state.game_over = True
-                    st.session_state.is_clear = True # 성공 기록!
+                    st.session_state.is_clear = True 
                     
-                    # 성공했을 때만 랭킹에 저장합니다.
                     ranking = load_ranking()
                     ranking.append({
                         "nickname": st.session_state.nickname, 
@@ -278,7 +275,6 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.session_state.attempts = 0
                 st.session_state.history = []
                 
-                # 리셋 시 HP 원상 복구
                 if st.session_state.difficulty == "쉬움":
                     st.session_state.hp = 10
                 elif st.session_state.difficulty == "지옥":
@@ -296,12 +292,15 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.write(f"[{idx+1}턴] 입력값: **{num}**")
         else:
             st.caption("대기 중...")
+            
+        # 💡 [핵심 업데이트] 개발자 전용 이스터에그 (치트키)
+        if st.session_state.nickname == "KimJunSeok":
+            st.markdown(f"<div style='text-align: right; color: #FF00FF; font-size: 0.8rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 3단계: 게임 종료 화면
 # ==========================================
 if st.session_state.game_over:
-    # 💡 [신규 패치] HP를 남기고 성공(is_clear) 했을 때만 축하 이펙트가 터집니다!
     if st.session_state.is_clear:
         st.balloons() 
         st.snow()     
