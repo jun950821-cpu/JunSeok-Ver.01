@@ -111,15 +111,15 @@ st.markdown("""
             border-bottom: 2px dashed #FF00FF !important;
         }
         
-        /* 💡 [신규 패치] 8. UP/DOWN 결과 알림창 가독성 완벽 개선 */
+        /* 8. UP/DOWN 결과 알림창 가독성 완벽 개선 */
         [data-testid="stAlert"] {
-            background-color: #000000 !important; /* 배경을 가장 어두운 검정으로 */
-            border: 2px solid #FFD700 !important; /* 테두리는 눈에 확 띄는 골드(노랑) 색상 */
-            box-shadow: 0 0 10px #FFD700 !important; /* 약간의 네온 빛 추가 */
+            background-color: #000000 !important; 
+            border: 2px solid #FFD700 !important; 
+            box-shadow: 0 0 10px #FFD700 !important; 
         }
         [data-testid="stAlert"] p, [data-testid="stAlert"] span, [data-testid="stAlert"] div {
-            color: #FFFFFF !important; /* 안의 글씨는 모두 가장 밝은 흰색으로 강제 적용 */
-            font-size: 1.15rem !important; /* 글씨 크기 15% 확대 */
+            color: #FFFFFF !important; 
+            font-size: 1.15rem !important; 
         }
     </style>
 """, unsafe_allow_html=True)
@@ -132,6 +132,7 @@ st.markdown("<p style='text-align:center; color:#00FFFF;'>INSERT COIN TO PLAY...
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
     st.session_state.game_over = False
+    st.session_state.is_clear = False
 
 # ==========================================
 # 1단계: 게임 시작 전
@@ -142,7 +143,7 @@ if not st.session_state.game_started:
     
     selected_diff = st.radio(
         "▶ SELECT STAGE LEVEL",
-        ["🟢 EASY (1~50)", "🔵 NORMAL (1~100)", "🔴 HELL (1~1000)"],
+        ["🟢 EASY (1~50) - HP 10", "🔵 NORMAL (1~100) - HP 7", "🔴 HELL (1~1000) - HP 5"],
         horizontal=True
     )
     
@@ -150,15 +151,19 @@ if not st.session_state.game_started:
         if nickname.strip() == "":
             st.warning("⚠️ 닉네임 입력 에러! 동전을 다시 넣어주세요.")
         else:
+            # 💡 [신규 패치] 난이도별 HP 세팅
             if "EASY" in selected_diff:
                 st.session_state.difficulty = "쉬움"
                 st.session_state.max_value = 50
+                st.session_state.hp = 10
             elif "HELL" in selected_diff:
                 st.session_state.difficulty = "지옥"
                 st.session_state.max_value = 1000
+                st.session_state.hp = 5
             else:
                 st.session_state.difficulty = "보통"
                 st.session_state.max_value = 100
+                st.session_state.hp = 7
                 
             st.session_state.nickname = nickname
             st.session_state.secret_number = random.randint(1, st.session_state.max_value)
@@ -166,7 +171,8 @@ if not st.session_state.game_started:
             st.session_state.history = [] 
             st.session_state.game_started = True
             st.session_state.game_over = False
-            st.session_state.message = f"SYSTEM: [{nickname}] 접속 완료. 목표 숫자가 생성되었습니다."
+            st.session_state.is_clear = False
+            st.session_state.message = f"SYSTEM: [{nickname}] 접속 완료! 남은 HP: {'❤️' * st.session_state.hp}"
             st.rerun()
             
     st.divider()
@@ -230,16 +236,33 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.session_state.attempts += 1
                 st.session_state.history.append(guess)
                 
+                # 💡 [신규 패치] HP 차감 및 게임 오버 판정 로직
                 if guess < st.session_state.secret_number:
-                    st.session_state.message = f"🔺 UP!! [{guess}] 보다 높습니다. (HP 소모: {st.session_state.attempts})"
+                    st.session_state.hp -= 1
+                    if st.session_state.hp <= 0:
+                        st.session_state.message = f"💀 GAME OVER 💀 HP가 0이 되었습니다... 정답은 [{st.session_state.secret_number}]!"
+                        st.session_state.game_over = True
+                        st.session_state.is_clear = False
+                    else:
+                        st.session_state.message = f"🔺 UP!! [{guess}] 보다 높습니다. (남은 HP: {'❤️' * st.session_state.hp})"
                     st.rerun()
+                    
                 elif guess > st.session_state.secret_number:
-                    st.session_state.message = f"🔻 DOWN!! [{guess}] 보다 낮습니다. (HP 소모: {st.session_state.attempts})"
+                    st.session_state.hp -= 1
+                    if st.session_state.hp <= 0:
+                        st.session_state.message = f"💀 GAME OVER 💀 HP가 0이 되었습니다... 정답은 [{st.session_state.secret_number}]!"
+                        st.session_state.game_over = True
+                        st.session_state.is_clear = False
+                    else:
+                        st.session_state.message = f"🔻 DOWN!! [{guess}] 보다 낮습니다. (남은 HP: {'❤️' * st.session_state.hp})"
                     st.rerun()
+                    
                 else:
                     st.session_state.message = f"🎉 MISSION CLEAR! 정답: {st.session_state.secret_number} / 타격 횟수: {st.session_state.attempts}회"
                     st.session_state.game_over = True
+                    st.session_state.is_clear = True # 성공 기록!
                     
+                    # 성공했을 때만 랭킹에 저장합니다.
                     ranking = load_ranking()
                     ranking.append({
                         "nickname": st.session_state.nickname, 
@@ -254,7 +277,16 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.session_state.secret_number = random.randint(1, st.session_state.max_value)
                 st.session_state.attempts = 0
                 st.session_state.history = []
-                st.session_state.message = f"SYSTEM: 스테이지 재시작. 새로운 목표가 설정되었습니다."
+                
+                # 리셋 시 HP 원상 복구
+                if st.session_state.difficulty == "쉬움":
+                    st.session_state.hp = 10
+                elif st.session_state.difficulty == "지옥":
+                    st.session_state.hp = 5
+                else:
+                    st.session_state.hp = 7
+                    
+                st.session_state.message = f"SYSTEM: 스테이지 재시작. (남은 HP: {'❤️' * st.session_state.hp})"
                 st.rerun()
                 
     with col2:
@@ -269,8 +301,11 @@ if st.session_state.game_started and not st.session_state.game_over:
 # 3단계: 게임 종료 화면
 # ==========================================
 if st.session_state.game_over:
-    st.balloons() 
-    st.snow()     
+    # 💡 [신규 패치] HP를 남기고 성공(is_clear) 했을 때만 축하 이펙트가 터집니다!
+    if st.session_state.is_clear:
+        st.balloons() 
+        st.snow()     
+        
     st.success(st.session_state.message)
     st.info(f"▶ LOG 데이터: {', '.join(map(str, st.session_state.history))}")
     
