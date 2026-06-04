@@ -51,33 +51,40 @@ def get_top_3_by_difficulty(ranking_list, diff_name):
 st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
 
 # ==========================================
-# 🎨 [핵심 추가] 오락실 테마 CSS 스타일링 강제 주입
+# 🎨 [가독성 개선] 오락실 테마 CSS 스타일링 
 # ==========================================
 st.markdown("""
     <style>
-        /* 1. 레트로 픽셀 폰트 (둥근모꼴) 불러오기 */
+        /* 1. 레트로 픽셀 폰트 불러오기 */
         @import url('https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css');
 
-        /* 2. 전체 배경과 기본 폰트 색상 (블랙 & 네온 그린) */
-        html, body, [class*="css"] {
-            font-family: 'NeoDunggeunmo', sans-serif !important;
-            background-color: #0a0a0a !important; /* 아주 어두운 검정 */
-            color: #39FF14 !important; /* 네온 그린 */
+        /* 2. Streamlit 전체 배경 강제 다크모드 적용 (가장 중요!) */
+        [data-testid="stAppViewContainer"] {
+            background-color: #111111 !important; /* 진한 검정색 배경 */
+        }
+        [data-testid="stHeader"] {
+            background-color: transparent !important;
         }
 
-        /* 3. 제목 네온사인 이펙트 (마젠타/핑크) */
+        /* 3. 전체 폰트 및 기본 글씨 색상 (네온 그린) */
+        html, body, p, span, div, label, li {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+            color: #39FF14 !important; 
+        }
+
+        /* 4. 제목 네온사인 가독성 대폭 개선 */
         h1, h2, h3 {
-            color: #FF00FF !important;
-            text-shadow: 0 0 5px #FF00FF, 0 0 10px #FF00FF, 0 0 20px #FF00FF !important;
+            color: #FFFFFF !important; /* 글씨 본체는 흰색으로 선명하게 */
+            text-shadow: 0 0 5px #FF00FF, 0 0 10px #FF00FF, 0 0 20px #FF00FF !important; /* 외곽선만 자주색 빛남 */
             text-align: center !important;
         }
 
-        /* 4. 게임 버튼 오락실 스타일 (사이버펑크 블루) */
+        /* 5. 게임 버튼 오락실 스타일 */
         .stButton>button {
             background-color: transparent !important;
             color: #00FFFF !important;
             border: 2px solid #00FFFF !important;
-            box-shadow: 0 0 8px #00FFFF !important;
+            box-shadow: 0 0 5px #00FFFF !important;
             font-family: 'NeoDunggeunmo', sans-serif !important;
             transition: all 0.2s ease-in-out;
             width: 100%;
@@ -85,31 +92,29 @@ st.markdown("""
         .stButton>button:hover {
             background-color: #00FFFF !important;
             color: #000000 !important;
-            box-shadow: 0 0 15px #00FFFF, 0 0 25px #00FFFF !important;
-            transform: scale(1.02);
+            box-shadow: 0 0 15px #00FFFF !important;
         }
 
-        /* 5. 입력창 및 정보창 스타일 (경고/성공 알림창 포함) */
+        /* 6. 입력창 가독성 개선 */
         .stTextInput input, .stNumberInput input {
-            background-color: #1a1a1a !important;
-            color: #FFD700 !important; /* 골드 */
+            background-color: #222222 !important;
+            color: #39FF14 !important; /* 타이핑하는 글씨는 네온그린 */
             border: 1px solid #39FF14 !important;
             font-family: 'NeoDunggeunmo', sans-serif !important;
         }
-        .stAlert {
-            background-color: rgba(57, 255, 20, 0.1) !important;
-            border: 1px solid #39FF14 !important;
-            color: #FFFFFF !important;
+        /* 입력창 안의 흐릿한 안내 문구 색상 조절 */
+        input::placeholder {
+            color: #888888 !important; 
         }
-        
-        /* 6. 점선 구분선 */
+
+        /* 7. 점선 구분선 */
         hr {
             border-bottom: 2px dashed #FF00FF !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# 💡 HTML 태그를 이용해 타이틀을 중앙 정렬하고 깜빡이는 느낌을 줍니다.
+# 💡 타이틀 출력
 st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#00FFFF;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
 
@@ -120,7 +125,7 @@ if "game_started" not in st.session_state:
     st.session_state.game_over = False
 
 # ==========================================
-# 1단계: 게임 시작 전 (닉네임 입력 + 난이도 선택 + 🏆분할 명예의 전당)
+# 1단계: 게임 시작 전
 # ==========================================
 if not st.session_state.game_started:
     st.subheader("▶ PLAYER LOG-IN")
