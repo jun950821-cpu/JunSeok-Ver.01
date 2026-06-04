@@ -67,8 +67,22 @@ if st.session_state.game_started and not st.session_state.game_over:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        # 💡 [모바일 최적화 핵심] 입력창 대신 손가락으로 미는 슬라이더로 교체!
-        guess = st.slider("💡 숫자를 선택하세요 (1~100):", min_value=1, max_value=100, value=50)
+        # 💡 [UX 개선 핵심] 플레이어가 직접 입력 방식을 선택할 수 있는 토글 스위치
+        input_mode = st.radio(
+            "접속하신 환경에 맞는 입력 방식을 선택하세요:",
+            ["⌨️ PC 환경 (직접 입력)", "📱 모바일 환경 (슬라이더)"],
+            horizontal=True
+        )
+        
+        st.write("") # 한 줄 띄우기
+        
+        # 선택한 모드에 따라 입력창을 다르게 보여줌
+        if input_mode == "⌨️ PC 환경 (직접 입력)":
+            guess = st.number_input("숫자를 입력하세요 (1~100):", min_value=1, max_value=100, value=50, step=1)
+        else:
+            guess = st.slider("숫자를 선택하세요 (1~100):", min_value=1, max_value=100, value=50)
+        
+        st.write("") # 한 줄 띄우기
         
         btn_col1, btn_col2 = st.columns(2)
         
@@ -123,7 +137,7 @@ if st.session_state.game_over:
     ranking = load_ranking()
     for i, record in enumerate(ranking[:5]):
         medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "🏅"
-        st.write(f"**{medal} {i+1}위:** {record['nickname']} network ({record['attempts']}번 시도)")
+        st.write(f"**{medal} {i+1}위:** {record['nickname']}님 ({record['attempts']}번 시도)")
 
     st.divider()
     
