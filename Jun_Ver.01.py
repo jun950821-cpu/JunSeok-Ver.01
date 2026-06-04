@@ -69,24 +69,37 @@ if st.session_state.game_started and not st.session_state.game_over:
     with col1:
         guess = st.number_input("숫자를 입력하세요 (1~100):", min_value=1, max_value=100, value=50, step=1)
         
-        if st.button("정답 확인하기"):
-            st.session_state.attempts += 1
-            st.session_state.history.append(guess)
-            
-            if guess < st.session_state.secret_number:
-                st.session_state.message = f"🔺 UP! {guess}보다 큽니다. (현재 시도: {st.session_state.attempts}회)"
-                st.rerun()
-            elif guess > st.session_state.secret_number:
-                st.session_state.message = f"🔻 DOWN! {guess}보다 작습니다. (현재 시도: {st.session_state.attempts}회)"
-                st.rerun()
-            else:
-                st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.attempts}번 만에 맞추셨습니다!"
-                st.session_state.game_over = True
+        # 버튼들을 깔끔하게 배치하기 위한 서브 컬럼
+        btn_col1, btn_col2 = st.columns(2)
+        
+        with btn_col1:
+            if st.button("정답 확인하기", use_container_width=True):
+                st.session_state.attempts += 1
+                st.session_state.history.append(guess)
                 
-                ranking = load_ranking()
-                ranking.append({"nickname": st.session_state.nickname, "attempts": st.session_state.attempts})
-                ranking = sorted(ranking, key=lambda x: x["attempts"])
-                save_ranking(ranking)
+                if guess < st.session_state.secret_number:
+                    st.session_state.message = f"🔺 UP! {guess}보다 큽니다. (현재 시도: {st.session_state.attempts}회)"
+                    st.rerun()
+                elif guess > st.session_state.secret_number:
+                    st.session_state.message = f"🔻 DOWN! {guess}보다 작습니다. (현재 시도: {st.session_state.attempts}회)"
+                    st.rerun()
+                else:
+                    st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.attempts}번 만에 맞추셨습니다!"
+                    st.session_state.game_over = True
+                    
+                    ranking = load_ranking()
+                    ranking.append({"nickname": st.session_state.nickname, "attempts": st.session_state.attempts})
+                    ranking = sorted(ranking, key=lambda x: x["attempts"])
+                    save_ranking(ranking)
+                    st.rerun()
+                    
+        with btn_col2:
+            # 💡 [핵심 추가] 게임 도중 언제든 리셋할 수 있는 버튼입니다.
+            if st.button("🔄 현재 게임 리셋", use_container_width=True):
+                st.session_state.secret_number = random.randint(1, 100) # 새 숫자 뽑기
+                st.session_state.attempts = 0                            # 시도 횟수 리셋
+                st.session_state.history = []                            # 히스토리 비우기
+                st.session_state.message = f"🔄 게임이 리셋되었습니다! **{st.session_state.nickname}**님, 새로운 숫자를 맞춰보세요."
                 st.rerun()
                 
     with col2:
@@ -121,19 +134,16 @@ if st.session_state.game_over:
 
 
 # ==========================================
-# 💡 4단계: 한 줄 방명록 섹션 (화면 맨 아래 항상 노출)
+# 4단계: 한 줄 방명록 섹션 (화면 맨 아래 항상 노출)
 # ==========================================
 st.divider()
 st.subheader("💬 J.S.Kim의 게임 방명록")
 
-# 방명록 작성 양식 (폼)
 with st.form("chat_form", clear_on_submit=True):
     if st.session_state.game_started:
-        # 게임 로그인 상태라면 닉네임 고정 고정
         author_name = st.session_state.nickname
         st.text(f"✍️ 작성자: {author_name} (게임 참가 중)")
     else:
-        # 로그인 전이라면 직접 닉네임 입력 가능
         author_name = st.text_input("닉네임", max_chars=10, placeholder="이름")
 
     chat_message = st.text_input("응원 한 마디를 남겨주세요!", max_chars=100, placeholder="재밌네요! 등등")
@@ -145,16 +155,13 @@ with st.form("chat_form", clear_on_submit=True):
         elif not chat_message.strip():
             st.error("내용을 입력해 주세요!")
         else:
-            # 방명록 데이터 가져와서 추가 후 저장
             current_chats = load_chat()
             current_chats.append({"name": author_name, "msg": chat_message})
             save_chat(current_chats)
-            st.rerun() # 화면 새로고침하여 즉시 반영
+            st.rerun()
 
-# 방명록 목록 출력
 saved_chats = load_chat()
 if saved_chats:
-    # 가장 최근에 쓴 글이 맨 위로 오도록 정렬 (최신 10개만 표시)
     for chat in reversed(saved_chats[-10:]):
         st.write(f"**{chat['name']}** : {chat['msg']}")
 else:
