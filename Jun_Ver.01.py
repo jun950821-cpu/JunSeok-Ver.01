@@ -128,4 +128,4 @@ if st.session_state.game_started and not st.session_state.game_over:
         st.subheader("📝 나의 기록")
         if st.session_state.history:
             for idx, num in enumerate(st.session_state.history):
-                st.write(f"{idx+1}회차: **{num}**
+                st.write(f"{idx+1}회차: **{num}**")
