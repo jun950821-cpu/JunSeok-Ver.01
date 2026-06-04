@@ -3,7 +3,7 @@ import random
 import json
 import os
 
-# --- 💾 랭킹 및 방명록 데이터 저장/불러오기 (안전 가드 추가) ---
+# --- 💾 랭킹 및 방명록 데이터 저장/불러오기 ---
 RANKING_FILE = "ranking.json"
 CHAT_FILE = "chat.json"
 
@@ -12,7 +12,6 @@ def load_ranking():
         try:
             with open(RANKING_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # 💡 예전 깨진 코드 때문에 잘못 저장된 유효하지 않은 데이터는 자동으로 걸러냅니다.
                 return [r for r in data if isinstance(r, dict) and "nickname" in r and "attempts" in r]
         except Exception:
             return []
@@ -30,7 +29,6 @@ def load_chat():
         try:
             with open(CHAT_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # 💡 방명록도 깨진 데이터가 있다면 안전하게 걸러냅니다.
                 return [c for c in data if isinstance(c, dict) and "name" in c and "msg" in c]
         except Exception:
             return []
@@ -43,11 +41,78 @@ def save_chat(chat_list):
     except Exception:
         pass
 
+def get_top_3_by_difficulty(ranking_list, diff_name):
+    filtered = [r for r in ranking_list if r.get("difficulty", "보통") == diff_name]
+    sorted_ranking = sorted(filtered, key=lambda x: x["attempts"])
+    return sorted_ranking[:3]
+
 
 # --- 🎮 웹페이지 기본 설정 ---
-st.set_page_config(page_title="Up & Down Game", page_icon="🎮")
-st.title("🚀 U P  &  D O W N  G A M E")
-st.caption("Created by J.S.Kim")
+st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
+
+# ==========================================
+# 🎨 [핵심 추가] 오락실 테마 CSS 스타일링 강제 주입
+# ==========================================
+st.markdown("""
+    <style>
+        /* 1. 레트로 픽셀 폰트 (둥근모꼴) 불러오기 */
+        @import url('https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css');
+
+        /* 2. 전체 배경과 기본 폰트 색상 (블랙 & 네온 그린) */
+        html, body, [class*="css"] {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+            background-color: #0a0a0a !important; /* 아주 어두운 검정 */
+            color: #39FF14 !important; /* 네온 그린 */
+        }
+
+        /* 3. 제목 네온사인 이펙트 (마젠타/핑크) */
+        h1, h2, h3 {
+            color: #FF00FF !important;
+            text-shadow: 0 0 5px #FF00FF, 0 0 10px #FF00FF, 0 0 20px #FF00FF !important;
+            text-align: center !important;
+        }
+
+        /* 4. 게임 버튼 오락실 스타일 (사이버펑크 블루) */
+        .stButton>button {
+            background-color: transparent !important;
+            color: #00FFFF !important;
+            border: 2px solid #00FFFF !important;
+            box-shadow: 0 0 8px #00FFFF !important;
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+            transition: all 0.2s ease-in-out;
+            width: 100%;
+        }
+        .stButton>button:hover {
+            background-color: #00FFFF !important;
+            color: #000000 !important;
+            box-shadow: 0 0 15px #00FFFF, 0 0 25px #00FFFF !important;
+            transform: scale(1.02);
+        }
+
+        /* 5. 입력창 및 정보창 스타일 (경고/성공 알림창 포함) */
+        .stTextInput input, .stNumberInput input {
+            background-color: #1a1a1a !important;
+            color: #FFD700 !important; /* 골드 */
+            border: 1px solid #39FF14 !important;
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+        }
+        .stAlert {
+            background-color: rgba(57, 255, 20, 0.1) !important;
+            border: 1px solid #39FF14 !important;
+            color: #FFFFFF !important;
+        }
+        
+        /* 6. 점선 구분선 */
+        hr {
+            border-bottom: 2px dashed #FF00FF !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# 💡 HTML 태그를 이용해 타이틀을 중앙 정렬하고 깜빡이는 느낌을 줍니다.
+st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#00FFFF;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
+
 
 # --- 🧠 기억 상자(세션) 초기화 ---
 if "game_started" not in st.session_state:
@@ -55,144 +120,184 @@ if "game_started" not in st.session_state:
     st.session_state.game_over = False
 
 # ==========================================
-# 1단계: 게임 시작 전 (닉네임 입력 화면 + 🏆명예의 전당 상시 노출)
+# 1단계: 게임 시작 전 (닉네임 입력 + 난이도 선택 + 🏆분할 명예의 전당)
 # ==========================================
 if not st.session_state.game_started:
-    st.subheader("환영합니다! 플레이어의 이름을 알려주세요.")
-    nickname = st.text_input("💡 닉네임 입력:")
+    st.subheader("▶ PLAYER LOG-IN")
+    nickname = st.text_input("NICKNAME:", placeholder="이름을 입력하라...")
     
-    if st.button("게임 시작하기"):
+    selected_diff = st.radio(
+        "▶ SELECT STAGE LEVEL",
+        ["🟢 EASY (1~50)", "🔵 NORMAL (1~100)", "🔴 HELL (1~1000)"],
+        horizontal=True
+    )
+    
+    if st.button("PRESS START BUTTON"):
         if nickname.strip() == "":
-            st.warning("닉네임을 입력해야 시작할 수 있습니다!")
+            st.warning("⚠️ 닉네임 입력 에러! 동전을 다시 넣어주세요.")
         else:
+            if "EASY" in selected_diff:
+                st.session_state.difficulty = "쉬움"
+                st.session_state.max_value = 50
+            elif "HELL" in selected_diff:
+                st.session_state.difficulty = "지옥"
+                st.session_state.max_value = 1000
+            else:
+                st.session_state.difficulty = "보통"
+                st.session_state.max_value = 100
+                
             st.session_state.nickname = nickname
-            st.session_state.secret_number = random.randint(1, 100)
+            st.session_state.secret_number = random.randint(1, st.session_state.max_value)
             st.session_state.attempts = 0
             st.session_state.history = [] 
             st.session_state.game_started = True
             st.session_state.game_over = False
-            st.session_state.message = f"반갑습니다, **{nickname}**님! 컴퓨터가 숫자를 골랐습니다."
+            st.session_state.message = f"SYSTEM: [{nickname}] 접속 완료. 목표 숫자가 생성되었습니다."
             st.rerun()
             
     st.divider()
-    st.subheader("🏆 명예의 전당 (Top 5) 🏆")
+    st.subheader("🏆 HALL OF FAME 🏆")
     
-    ranking = load_ranking()
-    if ranking:
-        for i, record in enumerate(ranking[:5]):
-            medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "🏅"
-            st.write(f"**{medal} {i+1}위:** {record['nickname']}님 ({record['attempts']}번 시도)")
-    else:
-        st.caption("아직 등록된 랭킹이 없습니다. 첫 번째 주인공이 되어보세요!")
+    tab1, tab2, tab3 = st.tabs(["🟢 EASY", "🔵 NORMAL", "🔴 HELL"])
+    all_rankings = load_ranking()
+    
+    with tab1:
+        easy_top3 = get_top_3_by_difficulty(all_rankings, "쉬움")
+        if easy_top3:
+            for i, record in enumerate(easy_top3):
+                st.write(f"**[{i+1}위]** {record['nickname']} 님 (스코어: {record['attempts']}회)")
+        else:
+            st.caption("NO DATA.")
+            
+    with tab2:
+        normal_top3 = get_top_3_by_difficulty(all_rankings, "보통")
+        if normal_top3:
+            for i, record in enumerate(normal_top3):
+                st.write(f"**[{i+1}위]** {record['nickname']} 님 (스코어: {record['attempts']}회)")
+        else:
+            st.caption("NO DATA.")
+            
+    with tab3:
+        hard_top3 = get_top_3_by_difficulty(all_rankings, "지옥")
+        if hard_top3:
+            for i, record in enumerate(hard_top3):
+                st.write(f"**[{i+1}위]** {record['nickname']} 님 (스코어: {record['attempts']}회)")
+        else:
+            st.caption("NO DATA.")
 
 # ==========================================
 # 2단계: 게임 진행 화면
 # ==========================================
 if st.session_state.game_started and not st.session_state.game_over:
-    st.info(st.session_state.message)
+    st.success(st.session_state.message)
     
     col1, col2 = st.columns([2, 1])
     
     with col1:
         input_mode = st.radio(
-            "접속하신 환경에 맞는 입력 방식을 선택하세요:",
-            ["⌨️ PC 환경 (직접 입력)", "📱 모바일 환경 (슬라이더)"],
+            "▶ CONTROLLER TYPE",
+            ["⌨️ KEYBOARD", "📱 JOYSTICK(SLIDER)"],
             horizontal=True
         )
         
         st.write("") 
         
-        if input_mode == "⌨️ PC 환경 (직접 입력)":
-            guess = st.number_input("숫자를 입력하세요 (1~100):", min_value=1, max_value=100, value=50, step=1)
+        if input_mode == "⌨️ KEYBOARD":
+            guess = st.number_input(f"TARGET (1~{st.session_state.max_value}):", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2), step=1)
         else:
-            guess = st.slider("숫자를 선택하세요 (1~100):", min_value=1, max_value=100, value=50)
+            guess = st.slider(f"TARGET (1~{st.session_state.max_value}):", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2))
         
         st.write("") 
         
         btn_col1, btn_col2 = st.columns(2)
         
         with btn_col1:
-            if st.button("정답 확인하기", use_container_width=True):
+            if st.button("ATTACK (정답 확인)"):
                 st.session_state.attempts += 1
                 st.session_state.history.append(guess)
                 
                 if guess < st.session_state.secret_number:
-                    st.session_state.message = f"🔺 UP! {guess}보다 큽니다. (현재 시도: {st.session_state.attempts}회)"
+                    st.session_state.message = f"🔺 UP!! [{guess}] 보다 높습니다. (HP 소모: {st.session_state.attempts})"
                     st.rerun()
                 elif guess > st.session_state.secret_number:
-                    st.session_state.message = f"🔻 DOWN! {guess}보다 작습니다. (현재 시도: {st.session_state.attempts}회)"
+                    st.session_state.message = f"🔻 DOWN!! [{guess}] 보다 낮습니다. (HP 소모: {st.session_state.attempts})"
                     st.rerun()
                 else:
-                    st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.attempts}번 만에 맞추셨습니다!"
+                    st.session_state.message = f"🎉 MISSION CLEAR! 정답: {st.session_state.secret_number} / 타격 횟수: {st.session_state.attempts}회"
                     st.session_state.game_over = True
                     
                     ranking = load_ranking()
-                    ranking.append({"nickname": st.session_state.nickname, "attempts": st.session_state.attempts})
-                    ranking = sorted(ranking, key=lambda x: x["attempts"])
+                    ranking.append({
+                        "nickname": st.session_state.nickname, 
+                        "attempts": st.session_state.attempts,
+                        "difficulty": st.session_state.difficulty
+                    })
                     save_ranking(ranking)
                     st.rerun()
                     
         with btn_col2:
-            if st.button("🔄 현재 게임 리셋", use_container_width=True):
-                st.session_state.secret_number = random.randint(1, 100)
+            if st.button("RESTART (새 게임)"):
+                st.session_state.secret_number = random.randint(1, st.session_state.max_value)
                 st.session_state.attempts = 0
                 st.session_state.history = []
-                st.session_state.message = f"🔄 게임이 리셋되었습니다! **{st.session_state.nickname}**님, 새로운 숫자를 맞춰보세요."
+                st.session_state.message = f"SYSTEM: 스테이지 재시작. 새로운 목표가 설정되었습니다."
                 st.rerun()
                 
     with col2:
-        st.subheader("📝 나의 기록")
+        st.subheader("📝 COMBAT LOG")
         if st.session_state.history:
             for idx, num in enumerate(st.session_state.history):
-                st.write(f"{idx+1}회차: **{num}**")
+                st.write(f"[{idx+1}턴] 입력값: **{num}**")
         else:
-            st.caption("아직 입력한 숫자가 없습니다.")
+            st.caption("대기 중...")
 
 # ==========================================
-# 3단계: 게임 종료 화면 (✨이펙트 상시 대기)
+# 3단계: 게임 종료 화면
 # ==========================================
 if st.session_state.game_over:
-    st.balloons() # 🎈 축하 풍선 이펙트 실행
-    st.snow()     # ❄️ 눈꽃 이펙트 동시 실행
-    st.success(st.session_state.message)
-    st.info(f"내가 입력했던 숫자들: {', '.join(map(str, st.session_state.history))}")
+    st.balloons() 
+    st.snow()     
+    st.warning(st.session_state.message)
+    st.info(f"▶ LOG 데이터: {', '.join(map(str, st.session_state.history))}")
     
     st.divider()
-    st.subheader("🏆 명예의 전당 (Top 5) 🏆")
+    st.subheader(f"🏆 {st.session_state.difficulty} RANKING 🏆")
     
-    ranking = load_ranking()
-    for i, record in enumerate(ranking[:5]):
-        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "🏅"
-        st.write(f"**{medal} {i+1}위:** {record['nickname']}님 ({record['attempts']}번 시도)")
+    all_rankings = load_ranking()
+    current_top3 = get_top_3_by_difficulty(all_rankings, st.session_state.difficulty)
+    
+    for i, record in enumerate(current_top3):
+        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
+        st.write(f"**{medal} RANK {i+1}:** {record['nickname']} ({record['attempts']} TRIES)")
 
     st.divider()
     
-    if st.button("다른 닉네임으로 다시 도전하기"):
+    if st.button("CONTINUE? (코인 넣기)"):
         st.session_state.game_started = False
         st.rerun()
 
 
 # ==========================================
-# 4단계: 한 줄 방명록 섹션 (화면 맨 아래 항상 노출)
+# 4단계: 방명록 섹션
 # ==========================================
 st.divider()
-st.subheader("💬 J.S.Kim의 게임 방명록")
+st.subheader("💬 GUEST BOOK")
 
 with st.form("chat_form", clear_on_submit=True):
     if st.session_state.game_started:
         author_name = st.session_state.nickname
-        st.text(f"✍️ 작성자: {author_name} (게임 참가 중)")
+        st.text(f"ID: {author_name} (PLAYING)")
     else:
-        author_name = st.text_input("닉네임", max_chars=10, placeholder="이름")
+        author_name = st.text_input("ID:", max_chars=10, placeholder="닉네임")
 
-    chat_message = st.text_input("응원 한 마디를 남겨주세요!", max_chars=100, placeholder="재밌네요! 등등")
-    submit_btn = st.form_submit_button("댓글 달기")
+    chat_message = st.text_input("MESSAGE:", max_chars=100, placeholder="메시지를 입력하세요...")
+    submit_btn = st.form_submit_button("ENTER")
 
     if submit_btn:
         if not author_name.strip():
-            st.error("닉네임을 입력해 주세요!")
+            st.error("ERROR: ID를 입력하세요.")
         elif not chat_message.strip():
-            st.error("내용을 입력해 주세요!")
+            st.error("ERROR: 메시지를 입력하세요.")
         else:
             current_chats = load_chat()
             current_chats.append({"name": author_name, "msg": chat_message})
@@ -202,6 +307,6 @@ with st.form("chat_form", clear_on_submit=True):
 saved_chats = load_chat()
 if saved_chats:
     for chat in reversed(saved_chats[-10:]):
-        st.write(f"**{chat['name']}** : {chat['msg']}")
+        st.write(f"**[{chat['name']}]** > {chat['msg']}")
 else:
-    st.caption("아직 작성된 메시지가 없습니다. 첫 번째 발자취를 남겨보세요!")
+    st.caption("데이터가 없습니다.")
