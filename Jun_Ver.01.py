@@ -75,12 +75,9 @@ st.markdown("""
             font-weight: 400 !important;
         }
 
-        /* 💡 수정 1: 타이틀(h1, h2, h3) 크기 및 레트로 폰트 최우선 강제 적용 */
-        h1, h1 *, h2, h2 *, h3, h3 *, strong {
-            font-family: 'NeoDunggeunmo', sans-serif !important;
-        }
-        
+        /* 타이틀(h1, h2, h3) 크기 및 레트로 폰트 최우선 강제 적용 */
         h1, h1 * {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
             font-size: 2.5rem !important; 
             color: #f472b6 !important; 
             text-shadow: 0 0 8px rgba(244, 114, 182, 0.5) !important;
@@ -88,6 +85,7 @@ st.markdown("""
         }
         
         h2, h2 * {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
             font-size: 1.8rem !important;
             color: #fdfa72 !important;
             text-shadow: 0 0 5px rgba(253, 250, 114, 0.4) !important;
@@ -95,22 +93,22 @@ st.markdown("""
         }
         
         h3, h3 * {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
             font-size: 1.4rem !important;
-            color: #34d399 !important; /* 서브타이틀 형광 초록 */
-            text-shadow: 0 0 5px rgba(52, 211, 153, 0.4) !important;
+            color: #34d399 !important;
         }
 
-        /* 💡 수정 2: 라디오 버튼(난이도 선택 등) 무조건 한 줄에 나오도록 줄바꿈 방지 */
+        /* 라디오 버튼 무조건 한 줄에 나오도록 줄바꿈 방지 */
         div[data-testid="stRadio"] > div {
             display: flex !important;
             flex-direction: row !important;
-            flex-wrap: nowrap !important; /* 줄바꿈 금지 */
-            gap: 15px !important; /* 버튼 간 간격 */
+            flex-wrap: nowrap !important;
+            gap: 15px !important;
         }
         
         div[data-testid="stRadio"] label {
-            white-space: nowrap !important; /* 글자 줄바꿈 금지 */
-            font-size: 0.95rem !important; /* 한 줄에 넣기 위해 폰트 살짝 다이어트 */
+            white-space: nowrap !important;
+            font-size: 0.95rem !important;
         }
 
         /* 5. 버튼 디자인 */
@@ -169,6 +167,30 @@ st.markdown("""
         /* 9. 구분선 */
         hr {
             border-bottom: 2px dashed #52525b !important;
+        }
+
+        /* 💡 [신규 패치] 10. 오락실 스타일 도트 CLEAR 대형 배너 박스 */
+        .arcade-clear-banner {
+            border: 4px double #34d399 !important; /* 클래식 오락실 이중선 테두리 */
+            background-color: #111111 !important;
+            padding: 25px !important;
+            border-radius: 12px !important;
+            text-align: center !important;
+            margin: 20px 0 30px 0 !important;
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.25) !important;
+        }
+        .arcade-clear-text {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+            font-size: 3.8rem !important; /* 대형 도트 글씨 */
+            color: #34d399 !important;
+            letter-spacing: 10px !important;
+            margin: 0 !important;
+            text-shadow: 0 0 12px rgba(52, 211, 153, 0.6) !important;
+            animation: retro-flash 0.6s infinite alternate steps(2); /* 오락실 2단계 플래시 애니메이션 */
+        }
+        @keyframes retro-flash {
+            0% { opacity: 1; text-shadow: 0 0 15px #34d399; }
+            100% { opacity: 0.5; text-shadow: 0 0 2px #34d399; }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -347,12 +369,16 @@ if st.session_state.game_started and not st.session_state.game_over:
             st.markdown(f"<div style='text-align: right; color: #f472b6; font-size: 0.85rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 3단계: 게임 종료 화면
+# 3단계: 게임 종료 화면 (💡 도트 배너 전면 교체)
 # ==========================================
 if st.session_state.game_over:
+    # 💡 [핵심 교체] 지저분한 폭죽 효과를 없애고, 깔끔하고 완벽한 오락실 전광판 배너를 사수했습니다.
     if st.session_state.is_clear:
-        st.balloons() 
-        st.snow()     
+        st.markdown("""
+            <div class="arcade-clear-banner">
+                <p class="arcade-clear-text">STAGE CLEAR</p>
+            </div>
+        """, unsafe_allow_html=True)
         
     st.warning(st.session_state.message)
     st.info(f"▶ LOG 데이터: {', '.join(map(str, st.session_state.history))}")
