@@ -108,4 +108,4 @@ if st.session_state.game_started and not st.session_state.game_over:
                     st.session_state.message = f"🔻 DOWN! {guess}보다 작습니다. (현재 시도: {st.session_state.attempts}회)"
                     st.rerun()
                 else:
-                    st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.
+                   st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.attempts}번 만에 맞추셨습니다!"
