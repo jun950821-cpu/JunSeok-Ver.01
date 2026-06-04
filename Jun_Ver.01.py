@@ -58,7 +58,6 @@ if not st.session_state.game_started:
             st.session_state.message = f"반갑습니다, **{nickname}**님! 컴퓨터가 숫자를 골랐습니다."
             st.rerun()
             
-    # 💡 [핵심 추가] 첫 화면 로그인창 바로 아래에 명예의 전당 배치!
     st.divider()
     st.subheader("🏆 명예의 전당 (Top 5) 🏆")
     
@@ -108,4 +107,25 @@ if st.session_state.game_started and not st.session_state.game_over:
                     st.session_state.message = f"🔻 DOWN! {guess}보다 작습니다. (현재 시도: {st.session_state.attempts}회)"
                     st.rerun()
                 else:
-                   st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.attempts}번 만에 맞추셨습니다!"
+                    st.session_state.message = f"🎉 대정답! {st.session_state.secret_number}을(를) {st.session_state.attempts}번 만에 맞추셨습니다!"
+                    st.session_state.game_over = True
+                    
+                    ranking = load_ranking()
+                    ranking.append({"nickname": st.session_state.nickname, "attempts": st.session_state.attempts})
+                    ranking = sorted(ranking, key=lambda x: x["attempts"])
+                    save_ranking(ranking)
+                    st.rerun()
+                    
+        with btn_col2:
+            if st.button("🔄 현재 게임 리셋", use_container_width=True):
+                st.session_state.secret_number = random.randint(1, 100)
+                st.session_state.attempts = 0
+                st.session_state.history = []
+                st.session_state.message = f"🔄 게임이 리셋되었습니다! **{st.session_state.nickname}**님, 새로운 숫자를 맞춰보세요."
+                st.rerun()
+                
+    with col2:
+        st.subheader("📝 나의 기록")
+        if st.session_state.history:
+            for idx, num in enumerate(st.session_state.history):
+                st.write(f"{idx+1}회차: **{num}**
