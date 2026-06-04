@@ -51,15 +51,15 @@ def get_top_3_by_difficulty(ranking_list, diff_name):
 st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
 
 # ==========================================
-# 🎨 [세련된 모던 레트로] 가독성 최적화 CSS 
+# 🎨 [가독성 + 레이아웃] 완벽 고정 CSS
 # ==========================================
 st.markdown("""
     <style>
-        /* 1. 레트로 픽셀 폰트 & 모던 고딕 폰트 동시에 불러오기 */
+        /* 1. 레트로 픽셀 폰트 & 모던 고딕 폰트 불러오기 */
         @import url('https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css');
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-        /* 2. 눈이 편안한 소프트 다크 그레이 배경 */
+        /* 2. 배경 다크모드 적용 */
         [data-testid="stAppViewContainer"] {
             background-color: #18181b !important;
         }
@@ -67,34 +67,58 @@ st.markdown("""
             background-color: transparent !important;
         }
 
-        /* 3. 일반 글씨는 가독성 최고의 '프리텐다드' + 부드러운 라이트 그레이 색상 */
-        html, body, p, span, div, label, li {
+        /* 3. 일반 글씨(라벨, 설명 등)는 '프리텐다드' 적용 */
+        p, label, li, div[data-testid="stMarkdownContainer"] > p {
             font-family: 'Pretendard', sans-serif !important;
             color: #d4d4d8 !important; 
             font-size: 1.05rem !important;
             font-weight: 400 !important;
         }
 
-        /* 4. 제목과 특정 강조 부분만 '픽셀 폰트'로 감성 유지 */
-        h1, h2, h3, .stButton>button, strong {
+        /* 💡 수정 1: 타이틀(h1, h2, h3) 크기 및 레트로 폰트 최우선 강제 적용 */
+        h1, h1 *, h2, h2 *, h3, h3 *, strong {
             font-family: 'NeoDunggeunmo', sans-serif !important;
         }
-
-        /* 5. 은은한 파스텔 네온 타이틀 (눈부심 방지) */
-        h1, h2, h3 {
-            color: #fdfa72 !important; /* 소프트 옐로우 */
+        
+        h1, h1 * {
+            font-size: 2.5rem !important; 
+            color: #f472b6 !important; 
+            text-shadow: 0 0 8px rgba(244, 114, 182, 0.5) !important;
+            text-align: center !important;
+        }
+        
+        h2, h2 * {
+            font-size: 1.8rem !important;
+            color: #fdfa72 !important;
             text-shadow: 0 0 5px rgba(253, 250, 114, 0.4) !important;
             text-align: center !important;
         }
-        h1 {
-            color: #f472b6 !important; /* 소프트 핑크 */
-            text-shadow: 0 0 8px rgba(244, 114, 182, 0.5) !important;
+        
+        h3, h3 * {
+            font-size: 1.4rem !important;
+            color: #34d399 !important; /* 서브타이틀 형광 초록 */
+            text-shadow: 0 0 5px rgba(52, 211, 153, 0.4) !important;
         }
 
-        /* 6. 모던 레트로 스타일 버튼 */
+        /* 💡 수정 2: 라디오 버튼(난이도 선택 등) 무조건 한 줄에 나오도록 줄바꿈 방지 */
+        div[data-testid="stRadio"] > div {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important; /* 줄바꿈 금지 */
+            gap: 15px !important; /* 버튼 간 간격 */
+        }
+        
+        div[data-testid="stRadio"] label {
+            white-space: nowrap !important; /* 글자 줄바꿈 금지 */
+            font-size: 0.95rem !important; /* 한 줄에 넣기 위해 폰트 살짝 다이어트 */
+        }
+
+        /* 5. 버튼 디자인 */
         .stButton>button {
+            font-family: 'NeoDunggeunmo', sans-serif !important;
+            font-size: 1.2rem !important;
             background-color: #27272a !important;
-            color: #34d399 !important; /* 소프트 형광 그린 */
+            color: #34d399 !important;
             border: 2px solid #34d399 !important;
             border-radius: 8px !important;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
@@ -108,19 +132,20 @@ st.markdown("""
             transform: scale(1.02);
         }
 
-        /* 7. 입력창 디자인 (카드형 가독성) */
+        /* 6. 입력창 가독성 최적화 */
         .stTextInput input, .stNumberInput input {
             background-color: #27272a !important;
             color: #34d399 !important;
             border: 1px solid #52525b !important;
             border-radius: 6px !important;
             font-family: 'Pretendard', sans-serif !important;
+            font-size: 1.1rem !important;
         }
         input::placeholder {
             color: #71717a !important; 
         }
 
-        /* 8. 결과 알림창 (가독성 높은 딥 인디고 카드 디자인) */
+        /* 7. 알림창 딥 인디고 카드 디자인 */
         [data-testid="stAlert"] {
             background-color: #1e1b4b !important; 
             border: 1px solid #6366f1 !important; 
@@ -129,10 +154,11 @@ st.markdown("""
         [data-testid="stAlert"] * {
             color: #e0e7ff !important; 
             font-family: 'Pretendard', sans-serif !important;
+            font-size: 1.05rem !important;
             font-weight: 500 !important;
         }
 
-        /* 9. 방명록 등 폼 영역 (카드 UI) */
+        /* 8. 폼 영역 (방명록 카드) */
         [data-testid="stForm"] {
             background-color: #1f1f22 !important;
             border: 1px solid #3f3f46 !important;
@@ -140,7 +166,7 @@ st.markdown("""
             padding: 20px !important;
         }
 
-        /* 10. 구분선 */
+        /* 9. 구분선 */
         hr {
             border-bottom: 2px dashed #52525b !important;
         }
@@ -316,7 +342,7 @@ if st.session_state.game_started and not st.session_state.game_over:
         else:
             st.caption("대기 중...")
             
-        # 개발자 전용 이스터에그 (치트키)
+        # 개발자 전용 치트키 (이스터에그)
         if st.session_state.nickname == "KimJunSeok":
             st.markdown(f"<div style='text-align: right; color: #f472b6; font-size: 0.85rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
 
