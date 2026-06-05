@@ -48,6 +48,7 @@ def insert_chat(name, msg):
         pass
 
 def get_top_3_by_difficulty(ranking_list, diff_name):
+    # Compatibility mapping for existing Korean DB records
     mapping = {
         "EASY": ["EASY", "쉬움"],
         "NORMAL": ["NORMAL", "보통"],
@@ -263,7 +264,14 @@ if not st.session_state.game_started:
                 st.write(f"**[RANK]** {r['nickname']} ({r['attempts']} TRIES)")
 
 elif st.session_state.game_started and not st.session_state.game_over:
-    # 📌 수정된 부분: MIN/MAX 표시
+    # 📌 추가된 부분: HP 표시
+    st.markdown(f"""
+    <div style="text-align: center; font-family: 'NeoDunggeunmo', sans-serif; color: #f472b6; font-size: 1.8rem; margin-bottom: 10px;">
+        💖 HP: {st.session_state.hp}
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 📌 MIN/MAX 표시
     st.markdown(f"""
     <div style="display: flex; justify-content: space-between; font-family: 'NeoDunggeunmo', sans-serif; color: #34d399; font-size: 1.2rem; margin-bottom: 10px;">
         <span>MIN: {st.session_state.current_min}</span>
@@ -291,6 +299,7 @@ elif st.session_state.game_started and not st.session_state.game_over:
             elif st.session_state.attempts >= 10 and st.session_state.difficulty == "HELL": st.session_state.game_over = True
             elif guess < st.session_state.secret_number: st.session_state.current_min = max(st.session_state.current_min, guess + 1)
             else: st.session_state.current_max = min(st.session_state.current_max, guess - 1)
+            
             st.session_state.hp -= 1
             if st.session_state.hp <= 0: st.session_state.game_over = True
             st.rerun()
