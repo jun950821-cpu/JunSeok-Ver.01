@@ -1,43 +1,54 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
-import json
-import os
+from supabase import create_client, Client
 
-# --- 💾 랭킹 및 방명록 데이터 저장/불러오기 ---
-RANKING_FILE = "ranking.json"
-CHAT_FILE = "chat.json"
+# ==========================================
+# 💾 [레벨업] 클라우드 DB(Supabase) 연동 세팅
+# ==========================================
+@st.cache_resource
+def init_connection():
+    # 우리가 Streamlit Secrets에 숨겨둔 주소와 열쇠를 몰래 꺼내옵니다.
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
+supabase = init_connection()
+
+# DB에서 랭킹 불러오기
 def load_ranking():
-    if os.path.exists(RANKING_FILE):
-        try:
-            with open(RANKING_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return [r for r in data if isinstance(r, dict) and "nickname" in r and "attempts" in r]
-        except Exception:
-            return []
-    return []
-
-def save_ranking(ranking_list):
     try:
-        with open(RANKING_FILE, "w", encoding="utf-8") as f:
-            json.dump(ranking_list, f, ensure_ascii=False, indent=4)
+        response = supabase.table("ranking").select("*").execute()
+        return response.data
+    except Exception:
+        return []
+
+# DB에 새 랭킹 1줄 추가하기
+def insert_ranking(nickname, attempts, difficulty):
+    try:
+        supabase.table("ranking").insert({
+            "nickname": nickname, 
+            "attempts": attempts, 
+            "difficulty": difficulty
+        }).execute()
     except Exception:
         pass
 
+# DB에서 방명록 불러오기
 def load_chat():
-    if os.path.exists(CHAT_FILE):
-        try:
-            with open(CHAT_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return [c for c in data if isinstance(c, dict) and "name" in c and "msg" in c]
-        except Exception:
-            return []
-    return []
-
-def save_chat(chat_list):
     try:
-        with open(CHAT_FILE, "w", encoding="utf-8") as f:
-            json.dump(chat_list, f, ensure_ascii=False, indent=4)
+        response = supabase.table("chat").select("*").order("created_at", desc=False).execute()
+        return response.data
+    except Exception:
+        return []
+
+# DB에 새 방명록 1줄 추가하기
+def insert_chat(name, msg):
+    try:
+        supabase.table("chat").insert({
+            "name": name, 
+            "msg": msg
+        }).execute()
     except Exception:
         pass
 
@@ -55,19 +66,12 @@ st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="c
 # ==========================================
 st.markdown("""
     <style>
-        /* 1. 레트로 픽셀 폰트 & 모던 고딕 폰트 불러오기 */
         @import url('https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css');
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-        /* 2. 배경 다크모드 적용 */
-        [data-testid="stAppViewContainer"] {
-            background-color: #18181b !important;
-        }
-        [data-testid="stHeader"] {
-            background-color: transparent !important;
-        }
+        [data-testid="stAppViewContainer"] { background-color: #18181b !important; }
+        [data-testid="stHeader"] { background-color: transparent !important; }
 
-        /* 3. 일반 글씨(라벨, 설명 등)는 '프리텐다드' 적용 */
         p, label, li, div[data-testid="stMarkdownContainer"] > p {
             font-family: 'Pretendard', sans-serif !important;
             color: #d4d4d8 !important; 
@@ -75,7 +79,6 @@ st.markdown("""
             font-weight: 400 !important;
         }
 
-        /* 타이틀(h1, h2, h3) 크기 및 레트로 폰트 최우선 강제 적용 */
         h1, h1 * {
             font-family: 'NeoDunggeunmo', sans-serif !important;
             font-size: 2.5rem !important; 
@@ -98,7 +101,6 @@ st.markdown("""
             color: #34d399 !important;
         }
 
-        /* 라디오 버튼 무조건 한 줄에 나오도록 줄바꿈 방지 */
         div[data-testid="stRadio"] > div {
             display: flex !important;
             flex-direction: row !important;
@@ -111,7 +113,6 @@ st.markdown("""
             font-size: 0.95rem !important;
         }
 
-        /* 5. 버튼 디자인 */
         .stButton>button {
             font-family: 'NeoDunggeunmo', sans-serif !important;
             font-size: 1.2rem !important;
@@ -130,7 +131,6 @@ st.markdown("""
             transform: scale(1.02);
         }
 
-        /* 6. 입력창 가독성 최적화 */
         .stTextInput input, .stNumberInput input {
             background-color: #27272a !important;
             color: #34d399 !important;
@@ -139,11 +139,8 @@ st.markdown("""
             font-family: 'Pretendard', sans-serif !important;
             font-size: 1.1rem !important;
         }
-        input::placeholder {
-            color: #71717a !important; 
-        }
+        input::placeholder { color: #71717a !important; }
 
-        /* 7. 알림창 딥 인디고 카드 디자인 */
         [data-testid="stAlert"] {
             background-color: #1e1b4b !important; 
             border: 1px solid #6366f1 !important; 
@@ -156,7 +153,6 @@ st.markdown("""
             font-weight: 500 !important;
         }
 
-        /* 8. 폼 영역 (방명록 카드) */
         [data-testid="stForm"] {
             background-color: #1f1f22 !important;
             border: 1px solid #3f3f46 !important;
@@ -164,14 +160,10 @@ st.markdown("""
             padding: 20px !important;
         }
 
-        /* 9. 구분선 */
-        hr {
-            border-bottom: 2px dashed #52525b !important;
-        }
+        hr { border-bottom: 2px dashed #52525b !important; }
 
-        /* 💡 [신규 패치] 10. 오락실 스타일 도트 CLEAR 대형 배너 박스 */
         .arcade-clear-banner {
-            border: 4px double #34d399 !important; /* 클래식 오락실 이중선 테두리 */
+            border: 4px double #34d399 !important; 
             background-color: #111111 !important;
             padding: 25px !important;
             border-radius: 12px !important;
@@ -181,12 +173,12 @@ st.markdown("""
         }
         .arcade-clear-text {
             font-family: 'NeoDunggeunmo', sans-serif !important;
-            font-size: 3.8rem !important; /* 대형 도트 글씨 */
+            font-size: 3.8rem !important; 
             color: #34d399 !important;
             letter-spacing: 10px !important;
             margin: 0 !important;
             text-shadow: 0 0 12px rgba(52, 211, 153, 0.6) !important;
-            animation: retro-flash 0.6s infinite alternate steps(2); /* 오락실 2단계 플래시 애니메이션 */
+            animation: retro-flash 0.6s infinite alternate steps(2); 
         }
         @keyframes retro-flash {
             0% { opacity: 1; text-shadow: 0 0 15px #34d399; }
@@ -249,6 +241,8 @@ if not st.session_state.game_started:
     st.subheader("🏆 HALL OF FAME 🏆")
     
     tab1, tab2, tab3 = st.tabs(["🟢 EASY", "🔵 NORMAL", "🔴 HELL"])
+    
+    # 💡 [DB 연동] DB에서 랭킹 데이터를 실시간으로 가져옵니다!
     all_rankings = load_ranking()
     
     with tab1:
@@ -331,13 +325,8 @@ if st.session_state.game_started and not st.session_state.game_over:
                     st.session_state.game_over = True
                     st.session_state.is_clear = True 
                     
-                    ranking = load_ranking()
-                    ranking.append({
-                        "nickname": st.session_state.nickname, 
-                        "attempts": st.session_state.attempts,
-                        "difficulty": st.session_state.difficulty
-                    })
-                    save_ranking(ranking)
+                    # 💡 [DB 연동] 정답을 맞추면 클라우드 금고로 데이터를 쏴줍니다!
+                    insert_ranking(st.session_state.nickname, st.session_state.attempts, st.session_state.difficulty)
                     st.rerun()
                     
         with btn_col2:
@@ -364,15 +353,13 @@ if st.session_state.game_started and not st.session_state.game_over:
         else:
             st.caption("대기 중...")
             
-        # 개발자 전용 치트키 (이스터에그)
         if st.session_state.nickname == "KimJunSeok":
             st.markdown(f"<div style='text-align: right; color: #f472b6; font-size: 0.85rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 3단계: 게임 종료 화면 (💡 도트 배너 전면 교체)
+# 3단계: 게임 종료 화면
 # ==========================================
 if st.session_state.game_over:
-    # 💡 [핵심 교체] 지저분한 폭죽 효과를 없애고, 깔끔하고 완벽한 오락실 전광판 배너를 사수했습니다.
     if st.session_state.is_clear:
         st.markdown("""
             <div class="arcade-clear-banner">
@@ -422,11 +409,11 @@ with st.form("chat_form", clear_on_submit=True):
         elif not chat_message.strip():
             st.error("ERROR: 메시지를 입력하세요.")
         else:
-            current_chats = load_chat()
-            current_chats.append({"name": author_name, "msg": chat_message})
-            save_chat(current_chats)
+            # 💡 [DB 연동] 방명록을 쓰면 클라우드 금고로 데이터를 쏴줍니다!
+            insert_chat(author_name, chat_message)
             st.rerun()
 
+# 💡 [DB 연동] DB에서 방명록 데이터를 실시간으로 가져옵니다!
 saved_chats = load_chat()
 if saved_chats:
     for chat in reversed(saved_chats[-10:]):
