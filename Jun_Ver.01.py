@@ -199,12 +199,12 @@ st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#34d399; font-weight:600;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
 
 # --- 🎵 BGM Player ---
-# 💡 [신규] 아케이드 BGM 플레이어 추가 (자동재생 및 반복)
+# 정상 작동하는 구글 서버의 8비트 아케이드 음원으로 교체되었습니다.
 bgm_html = """
 <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 25px;">
     <span style="color: #fdfa72; font-family: 'NeoDunggeunmo', sans-serif; font-size: 0.95rem; margin-bottom: 8px;">🎵 BGM ON/OFF</span>
     <audio autoplay loop controls style="height: 35px; width: 260px; border-radius: 8px; outline: none;">
-        <source src="https://assets.mixkit.co/music/preview/mixkit-arcade-retro-background-219.mp3" type="audio/mpeg">
+        <source src="https://codeskulptor-demos.commondatastorage.googleapis.com/pang/paza-moduless.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio>
 </div>
