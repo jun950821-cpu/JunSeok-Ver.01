@@ -4,18 +4,16 @@ import random
 from supabase import create_client, Client
 
 # ==========================================
-# 💾 [레벨업] 클라우드 DB(Supabase) 연동 세팅
+# 💾 클라우드 DB(Supabase) 연동 세팅
 # ==========================================
 @st.cache_resource
 def init_connection():
-    # 우리가 Streamlit Secrets에 숨겨둔 주소와 열쇠를 몰래 꺼내옵니다.
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
 supabase = init_connection()
 
-# DB에서 랭킹 불러오기
 def load_ranking():
     try:
         response = supabase.table("ranking").select("*").execute()
@@ -23,7 +21,6 @@ def load_ranking():
     except Exception:
         return []
 
-# DB에 새 랭킹 1줄 추가하기
 def insert_ranking(nickname, attempts, difficulty):
     try:
         supabase.table("ranking").insert({
@@ -34,7 +31,6 @@ def insert_ranking(nickname, attempts, difficulty):
     except Exception:
         pass
 
-# DB에서 방명록 불러오기
 def load_chat():
     try:
         response = supabase.table("chat").select("*").order("created_at", desc=False).execute()
@@ -42,7 +38,6 @@ def load_chat():
     except Exception:
         return []
 
-# DB에 새 방명록 1줄 추가하기
 def insert_chat(name, msg):
     try:
         supabase.table("chat").insert({
@@ -62,7 +57,7 @@ def get_top_3_by_difficulty(ranking_list, diff_name):
 st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
 
 # ==========================================
-# 🎨 [가독성 + 레이아웃] 완벽 고정 CSS
+# 🎨 완벽 고정 CSS
 # ==========================================
 st.markdown("""
     <style>
@@ -231,6 +226,11 @@ if not st.session_state.game_started:
             st.session_state.secret_number = random.randint(1, st.session_state.max_value)
             st.session_state.attempts = 0
             st.session_state.history = [] 
+            
+            # 💡 [신규 추가] 레이더 바를 위한 최소/최대값 기억
+            st.session_state.current_min = 1
+            st.session_state.current_max = st.session_state.max_value
+            
             st.session_state.game_started = True
             st.session_state.game_over = False
             st.session_state.is_clear = False
@@ -241,8 +241,6 @@ if not st.session_state.game_started:
     st.subheader("🏆 HALL OF FAME 🏆")
     
     tab1, tab2, tab3 = st.tabs(["🟢 EASY", "🔵 NORMAL", "🔴 HELL"])
-    
-    # 💡 [DB 연동] DB에서 랭킹 데이터를 실시간으로 가져옵니다!
     all_rankings = load_ranking()
     
     with tab1:
@@ -275,6 +273,36 @@ if not st.session_state.game_started:
 if st.session_state.game_started and not st.session_state.game_over:
     st.success(st.session_state.message)
     
+    # 💡 [신규 추가] 레이더 바 (Radar Bar) 렌더링
+    left_pct = ((st.session_state.current_min - 1) / st.session_state.max_value) * 100
+    width_pct = ((st.session_state.current_max - st.session_state.current_min + 1) / st.session_state.max_value) * 100
+    
+    radar_html = f"""
+    <div style="margin: 20px 0 30px 0;">
+        <p style="text-align: center; font-family: 'NeoDunggeunmo'; color: #fdfa72; font-size: 1.2rem; margin-bottom: 8px;">▶ TARGET RADAR ◀</p>
+        <div style="width: 100%; height: 35px; background-color: #27272a; border: 2px solid #52525b; border-radius: 6px; position: relative; overflow: hidden;">
+            <div style="
+                position: absolute;
+                left: {left_pct}%;
+                width: {width_pct}%;
+                height: 100%;
+                background-color: #34d399;
+                box-shadow: 0 0 15px rgba(52, 211, 153, 0.8);
+                transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 10px;
+                box-sizing: border-box;
+            ">
+                <span style="color: #18181b; font-weight: bold; font-family: 'NeoDunggeunmo'; font-size: 1.1rem;">{st.session_state.current_min}</span>
+                <span style="color: #18181b; font-weight: bold; font-family: 'NeoDunggeunmo'; font-size: 1.1rem;">{st.session_state.current_max}</span>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(radar_html, unsafe_allow_html=True)
+    
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -283,14 +311,12 @@ if st.session_state.game_started and not st.session_state.game_over:
             ["⌨️ KEYBOARD", "📱 JOYSTICK(SLIDER)"],
             horizontal=True
         )
-        
         st.write("") 
         
         if input_mode == "⌨️ KEYBOARD":
             guess = st.number_input(f"TARGET (1~{st.session_state.max_value}):", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2), step=1)
         else:
             guess = st.slider(f"TARGET (1~{st.session_state.max_value}):", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2))
-        
         st.write("") 
         
         btn_col1, btn_col2 = st.columns(2)
@@ -301,6 +327,9 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.session_state.history.append(guess)
                 
                 if guess < st.session_state.secret_number:
+                    # 💡 [신규 추가] 최소 범위 조율 (현재 최소값보다 큰 숫자를 불렀을 때만 갱신)
+                    st.session_state.current_min = max(st.session_state.current_min, guess + 1)
+                    
                     st.session_state.hp -= 1
                     if st.session_state.hp <= 0:
                         st.session_state.message = f"💀 GAME OVER 💀 HP가 0이 되었습니다... 정답은 [{st.session_state.secret_number}]!"
@@ -311,6 +340,9 @@ if st.session_state.game_started and not st.session_state.game_over:
                     st.rerun()
                     
                 elif guess > st.session_state.secret_number:
+                    # 💡 [신규 추가] 최대 범위 조율 (현재 최대값보다 작은 숫자를 불렀을 때만 갱신)
+                    st.session_state.current_max = min(st.session_state.current_max, guess - 1)
+                    
                     st.session_state.hp -= 1
                     if st.session_state.hp <= 0:
                         st.session_state.message = f"💀 GAME OVER 💀 HP가 0이 되었습니다... 정답은 [{st.session_state.secret_number}]!"
@@ -324,8 +356,6 @@ if st.session_state.game_started and not st.session_state.game_over:
                     st.session_state.message = f"🎉 MISSION CLEAR! 정답: {st.session_state.secret_number} / 타격 횟수: {st.session_state.attempts}회"
                     st.session_state.game_over = True
                     st.session_state.is_clear = True 
-                    
-                    # 💡 [DB 연동] 정답을 맞추면 클라우드 금고로 데이터를 쏴줍니다!
                     insert_ranking(st.session_state.nickname, st.session_state.attempts, st.session_state.difficulty)
                     st.rerun()
                     
@@ -334,6 +364,8 @@ if st.session_state.game_started and not st.session_state.game_over:
                 st.session_state.secret_number = random.randint(1, st.session_state.max_value)
                 st.session_state.attempts = 0
                 st.session_state.history = []
+                st.session_state.current_min = 1
+                st.session_state.current_max = st.session_state.max_value
                 
                 if st.session_state.difficulty == "쉬움":
                     st.session_state.hp = 10
@@ -409,11 +441,9 @@ with st.form("chat_form", clear_on_submit=True):
         elif not chat_message.strip():
             st.error("ERROR: 메시지를 입력하세요.")
         else:
-            # 💡 [DB 연동] 방명록을 쓰면 클라우드 금고로 데이터를 쏴줍니다!
             insert_chat(author_name, chat_message)
             st.rerun()
 
-# 💡 [DB 연동] DB에서 방명록 데이터를 실시간으로 가져옵니다!
 saved_chats = load_chat()
 if saved_chats:
     for chat in reversed(saved_chats[-10:]):
