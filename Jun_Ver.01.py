@@ -4,7 +4,7 @@ import random
 from supabase import create_client, Client
 
 # ==========================================
-# 💾 클라우드 DB(Supabase) 연동 세팅
+# 💾 Cloud DB (Supabase) Connection
 # ==========================================
 @st.cache_resource
 def init_connection():
@@ -48,16 +48,23 @@ def insert_chat(name, msg):
         pass
 
 def get_top_3_by_difficulty(ranking_list, diff_name):
-    filtered = [r for r in ranking_list if r.get("difficulty", "보통") == diff_name]
+    # Compatibility mapping for existing Korean DB records
+    mapping = {
+        "EASY": ["EASY", "쉬움"],
+        "NORMAL": ["NORMAL", "보통"],
+        "HELL": ["HELL", "지옥"]
+    }
+    allowed_diffs = mapping.get(diff_name, [diff_name])
+    filtered = [r for r in ranking_list if r.get("difficulty") in allowed_diffs]
     sorted_ranking = sorted(filtered, key=lambda x: x["attempts"])
     return sorted_ranking[:3]
 
 
-# --- 🎮 웹페이지 기본 설정 ---
+# --- 🎮 Web Page Configuration ---
 st.set_page_config(page_title="Up & Down Arcade", page_icon="🕹️", layout="centered")
 
 # ==========================================
-# 🎨 완벽 고정 CSS
+# 🎨 UI Style Sheet & Production Patch
 # ==========================================
 st.markdown("""
     <style>
@@ -179,25 +186,44 @@ st.markdown("""
             0% { opacity: 1; text-shadow: 0 0 15px #34d399; }
             100% { opacity: 0.5; text-shadow: 0 0 2px #34d399; }
         }
+
+        /* Production Patch: Hide Streamlit Default UI Elements */
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#34d399; font-weight:600;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
 
+# --- 🎵 BGM Player ---
+# 💡 [신규] 아케이드 BGM 플레이어 추가 (자동재생 및 반복)
+bgm_html = """
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 25px;">
+    <span style="color: #fdfa72; font-family: 'NeoDunggeunmo', sans-serif; font-size: 0.95rem; margin-bottom: 8px;">🎵 BGM ON/OFF</span>
+    <audio autoplay loop controls style="height: 35px; width: 260px; border-radius: 8px; outline: none;">
+        <source src="https://assets.mixkit.co/music/preview/mixkit-arcade-retro-background-219.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+</div>
+"""
+st.markdown(bgm_html, unsafe_allow_html=True)
 
-# --- 🧠 기억 상자(세션) 초기화 ---
+
+# --- 🧠 Session State Initialization ---
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
     st.session_state.game_over = False
     st.session_state.is_clear = False
 
 # ==========================================
-# 1단계: 게임 시작 전
+# Phase 1: Game Start / Menu Screen
 # ==========================================
 if not st.session_state.game_started:
     st.subheader("▶ PLAYER LOG-IN")
-    nickname = st.text_input("NICKNAME:", placeholder="이름을 입력하라...")
+    nickname = st.text_input("NICKNAME:", placeholder="Enter your hacker name...")
     
     selected_diff = st.radio(
         "▶ SELECT STAGE LEVEL",
@@ -207,18 +233,18 @@ if not st.session_state.game_started:
     
     if st.button("PRESS START BUTTON"):
         if nickname.strip() == "":
-            st.warning("⚠️ 닉네임 입력 에러! 동전을 다시 넣어주세요.")
+            st.warning("⚠️ LOGIN ERROR! Please enter your nickname to insert a coin.")
         else:
             if "EASY" in selected_diff:
-                st.session_state.difficulty = "쉬움"
+                st.session_state.difficulty = "EASY"
                 st.session_state.max_value = 50
                 st.session_state.hp = 10
             elif "HELL" in selected_diff:
-                st.session_state.difficulty = "지옥"
+                st.session_state.difficulty = "HELL"
                 st.session_state.max_value = 1000
                 st.session_state.hp = 5
             else:
-                st.session_state.difficulty = "보통"
+                st.session_state.difficulty = "NORMAL"
                 st.session_state.max_value = 100
                 st.session_state.hp = 7
                 
@@ -227,14 +253,13 @@ if not st.session_state.game_started:
             st.session_state.attempts = 0
             st.session_state.history = [] 
             
-            # 💡 [신규 추가] 레이더 바를 위한 최소/최대값 기억
             st.session_state.current_min = 1
             st.session_state.current_max = st.session_state.max_value
             
             st.session_state.game_started = True
             st.session_state.game_over = False
             st.session_state.is_clear = False
-            st.session_state.message = f"SYSTEM: [{nickname}] 접속 완료! 남은 HP: {'❤️' * st.session_state.hp}"
+            st.session_state.message = f"SYSTEM: [{nickname}] Initialized! HP Status: {'❤️' * st.session_state.hp}"
             st.rerun()
             
     st.divider()
@@ -244,36 +269,36 @@ if not st.session_state.game_started:
     all_rankings = load_ranking()
     
     with tab1:
-        easy_top3 = get_top_3_by_difficulty(all_rankings, "쉬움")
+        easy_top3 = get_top_3_by_difficulty(all_rankings, "EASY")
         if easy_top3:
             for i, record in enumerate(easy_top3):
-                st.write(f"**[{i+1}위]** {record['nickname']} 님 (스코어: {record['attempts']}회)")
+                st.write(f"**[RANK {i+1}]** {record['nickname']} (Score: {record['attempts']} TRIES)")
         else:
-            st.caption("NO DATA.")
+            st.caption("NO DATA AVAILABLE.")
             
     with tab2:
-        normal_top3 = get_top_3_by_difficulty(all_rankings, "보통")
+        normal_top3 = get_top_3_by_difficulty(all_rankings, "NORMAL")
         if normal_top3:
             for i, record in enumerate(normal_top3):
-                st.write(f"**[{i+1}위]** {record['nickname']} 님 (스코어: {record['attempts']}회)")
+                st.write(f"**[RANK {i+1}]** {record['nickname']} (Score: {record['attempts']} TRIES)")
         else:
-            st.caption("NO DATA.")
+            st.caption("NO DATA AVAILABLE.")
             
     with tab3:
-        hard_top3 = get_top_3_by_difficulty(all_rankings, "지옥")
+        hard_top3 = get_top_3_by_difficulty(all_rankings, "HELL")
         if hard_top3:
             for i, record in enumerate(hard_top3):
-                st.write(f"**[{i+1}위]** {record['nickname']} 님 (스코어: {record['attempts']}회)")
+                st.write(f"**[RANK {i+1}]** {record['nickname']} (Score: {record['attempts']} TRIES)")
         else:
-            st.caption("NO DATA.")
+            st.caption("NO DATA AVAILABLE.")
 
 # ==========================================
-# 2단계: 게임 진행 화면
+# Phase 2: In-Game Screen
 # ==========================================
 if st.session_state.game_started and not st.session_state.game_over:
     st.success(st.session_state.message)
     
-    # 💡 [신규 추가] 레이더 바 (Radar Bar) 렌더링
+    # Radar Bar Rendering
     left_pct = ((st.session_state.current_min - 1) / st.session_state.max_value) * 100
     width_pct = ((st.session_state.current_max - st.session_state.current_min + 1) / st.session_state.max_value) * 100
     
@@ -322,74 +347,70 @@ if st.session_state.game_started and not st.session_state.game_over:
         btn_col1, btn_col2 = st.columns(2)
         
         with btn_col1:
-            if st.button("ATTACK (정답 확인)"):
+            if st.button("ATTACK"):
                 st.session_state.attempts += 1
                 st.session_state.history.append(guess)
                 
                 if guess < st.session_state.secret_number:
-                    # 💡 [신규 추가] 최소 범위 조율 (현재 최소값보다 큰 숫자를 불렀을 때만 갱신)
                     st.session_state.current_min = max(st.session_state.current_min, guess + 1)
-                    
                     st.session_state.hp -= 1
                     if st.session_state.hp <= 0:
-                        st.session_state.message = f"💀 GAME OVER 💀 HP가 0이 되었습니다... 정답은 [{st.session_state.secret_number}]!"
+                        st.session_state.message = f"💀 GAME OVER 💀 HP reduced to 0... The core target was [{st.session_state.secret_number}]!"
                         st.session_state.game_over = True
                         st.session_state.is_clear = False
                     else:
-                        st.session_state.message = f"🔺 UP!! [{guess}] 보다 높습니다. (남은 HP: {'❤️' * st.session_state.hp})"
+                        st.session_state.message = f"🔺 UP!! Aim higher than [{guess}]. (Remaining HP: {'❤️' * st.session_state.hp})"
                     st.rerun()
                     
                 elif guess > st.session_state.secret_number:
-                    # 💡 [신규 추가] 최대 범위 조율 (현재 최대값보다 작은 숫자를 불렀을 때만 갱신)
                     st.session_state.current_max = min(st.session_state.current_max, guess - 1)
-                    
                     st.session_state.hp -= 1
                     if st.session_state.hp <= 0:
-                        st.session_state.message = f"💀 GAME OVER 💀 HP가 0이 되었습니다... 정답은 [{st.session_state.secret_number}]!"
+                        st.session_state.message = f"💀 GAME OVER 💀 HP reduced to 0... The core target was [{st.session_state.secret_number}]!"
                         st.session_state.game_over = True
                         st.session_state.is_clear = False
                     else:
-                        st.session_state.message = f"🔻 DOWN!! [{guess}] 보다 낮습니다. (남은 HP: {'❤️' * st.session_state.hp})"
+                        st.session_state.message = f"🔻 DOWN!! Aim lower than [{guess}]. (Remaining HP: {'❤️' * st.session_state.hp})"
                     st.rerun()
                     
                 else:
-                    st.session_state.message = f"🎉 MISSION CLEAR! 정답: {st.session_state.secret_number} / 타격 횟수: {st.session_state.attempts}회"
+                    st.session_state.message = f"🎉 MISSION CLEAR! Target: {st.session_state.secret_number} / Score: {st.session_state.attempts} Tries"
                     st.session_state.game_over = True
                     st.session_state.is_clear = True 
                     insert_ranking(st.session_state.nickname, st.session_state.attempts, st.session_state.difficulty)
                     st.rerun()
                     
         with btn_col2:
-            if st.button("RESTART (새 게임)"):
+            if st.button("RESTART"):
                 st.session_state.secret_number = random.randint(1, st.session_state.max_value)
                 st.session_state.attempts = 0
                 st.session_state.history = []
                 st.session_state.current_min = 1
                 st.session_state.current_max = st.session_state.max_value
                 
-                if st.session_state.difficulty == "쉬움":
+                if st.session_state.difficulty == "EASY":
                     st.session_state.hp = 10
-                elif st.session_state.difficulty == "지옥":
+                elif st.session_state.difficulty == "HELL":
                     st.session_state.hp = 5
                 else:
                     st.session_state.hp = 7
                     
-                st.session_state.message = f"SYSTEM: 스테이지 재시작. (남은 HP: {'❤️' * st.session_state.hp})"
+                st.session_state.message = f"SYSTEM: Stage Reset. (Remaining HP: {'❤️' * st.session_state.hp})"
                 st.rerun()
                 
     with col2:
         st.subheader("📝 COMBAT LOG")
         if st.session_state.history:
             for idx, num in enumerate(st.session_state.history):
-                st.write(f"[{idx+1}턴] 입력값: **{num}**")
+                st.write(f"[Turn {idx+1}] Guess: **{num}**")
         else:
-            st.caption("대기 중...")
+            st.caption("Standby...")
             
         if st.session_state.nickname == "KimJunSeok":
             st.markdown(f"<div style='text-align: right; color: #f472b6; font-size: 0.85rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 3단계: 게임 종료 화면
+# Phase 3: Game Over / Scoreboard Screen
 # ==========================================
 if st.session_state.game_over:
     if st.session_state.is_clear:
@@ -400,7 +421,7 @@ if st.session_state.game_over:
         """, unsafe_allow_html=True)
         
     st.warning(st.session_state.message)
-    st.info(f"▶ LOG 데이터: {', '.join(map(str, st.session_state.history))}")
+    st.info(f"▶ LOG DATA: {', '.join(map(str, st.session_state.history))}")
     
     st.divider()
     st.subheader(f"🏆 {st.session_state.difficulty} RANKING 🏆")
@@ -414,13 +435,13 @@ if st.session_state.game_over:
 
     st.divider()
     
-    if st.button("CONTINUE? (코인 넣기)"):
+    if st.button("CONTINUE? (Insert Coin)"):
         st.session_state.game_started = False
         st.rerun()
 
 
 # ==========================================
-# 4단계: 방명록 섹션
+# Phase 4: Guest Book Section
 # ==========================================
 st.divider()
 st.subheader("💬 GUEST BOOK")
@@ -430,16 +451,16 @@ with st.form("chat_form", clear_on_submit=True):
         author_name = st.session_state.nickname
         st.text(f"ID: {author_name} (PLAYING)")
     else:
-        author_name = st.text_input("ID:", max_chars=10, placeholder="닉네임")
+        author_name = st.text_input("ID:", max_chars=10, placeholder="Your Nickname")
 
-    chat_message = st.text_input("MESSAGE:", max_chars=100, placeholder="메시지를 입력하세요...")
+    chat_message = st.text_input("MESSAGE:", max_chars=100, placeholder="Type your arcade transmission message...")
     submit_btn = st.form_submit_button("ENTER")
 
     if submit_btn:
         if not author_name.strip():
-            st.error("ERROR: ID를 입력하세요.")
+            st.error("ERROR: ID cannot be empty.")
         elif not chat_message.strip():
-            st.error("ERROR: 메시지를 입력하세요.")
+            st.error("ERROR: Message cannot be empty.")
         else:
             insert_chat(author_name, chat_message)
             st.rerun()
@@ -449,4 +470,4 @@ if saved_chats:
     for chat in reversed(saved_chats[-10:]):
         st.write(f"**[{chat['name']}]** > {chat['msg']}")
 else:
-    st.caption("데이터가 없습니다.")
+    st.caption("No transmissions available.")
