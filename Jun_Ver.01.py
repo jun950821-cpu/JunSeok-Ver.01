@@ -187,10 +187,27 @@ st.markdown("""
             100% { opacity: 0.5; text-shadow: 0 0 2px #34d399; }
         }
 
-        /* Production Patch: Hide Streamlit Default UI Elements */
+        /* Production Patch */
         #MainMenu {visibility: hidden;}
         header {visibility: hidden;}
         footer {visibility: hidden;}
+
+        /* Donation Buttons */
+        .donate-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-family: 'NeoDunggeunmo', sans-serif;
+            font-size: 1.1rem;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 2px solid #18181b;
+        }
+        .donate-btn:hover {
+            transform: scale(1.05);
+        }
 
     </style>
 """, unsafe_allow_html=True)
@@ -199,7 +216,6 @@ st.markdown("<h1>🕹️ UP & DOWN ARCADE 🕹️</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#34d399; font-weight:600;'>INSERT COIN TO PLAY... Created by J.S.Kim</p>", unsafe_allow_html=True)
 
 # --- 🎵 BGM Player ---
-# 정상 작동하는 구글 서버의 8비트 아케이드 음원으로 교체되었습니다.
 bgm_html = """
 <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 25px;">
     <span style="color: #fdfa72; font-family: 'NeoDunggeunmo', sans-serif; font-size: 0.95rem; margin-bottom: 8px;">🎵 BGM ON/OFF</span>
@@ -211,263 +227,89 @@ bgm_html = """
 """
 st.markdown(bgm_html, unsafe_allow_html=True)
 
-
-# --- 🧠 Session State Initialization ---
+# --- 🧠 Session State ---
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
     st.session_state.game_over = False
     st.session_state.is_clear = False
 
 # ==========================================
-# Phase 1: Game Start / Menu Screen
+# Game Logic & UI
 # ==========================================
 if not st.session_state.game_started:
     st.subheader("▶ PLAYER LOG-IN")
     nickname = st.text_input("NICKNAME:", placeholder="Enter your hacker name...")
-    
-    selected_diff = st.radio(
-        "▶ SELECT STAGE LEVEL",
-        ["🟢 EASY (1~50) - HP 10", "🔵 NORMAL (1~100) - HP 7", "🔴 HELL (1~1000) - HP 5"],
-        horizontal=True
-    )
+    selected_diff = st.radio("▶ SELECT STAGE LEVEL", ["🟢 EASY (1~50) - HP 10", "🔵 NORMAL (1~100) - HP 7", "🔴 HELL (1~1000) - HP 5"], horizontal=True)
     
     if st.button("PRESS START BUTTON"):
-        if nickname.strip() == "":
-            st.warning("⚠️ LOGIN ERROR! Please enter your nickname to insert a coin.")
+        if nickname.strip() == "": st.warning("⚠️ LOGIN ERROR!")
         else:
-            if "EASY" in selected_diff:
-                st.session_state.difficulty = "EASY"
-                st.session_state.max_value = 50
-                st.session_state.hp = 10
-            elif "HELL" in selected_diff:
-                st.session_state.difficulty = "HELL"
-                st.session_state.max_value = 1000
-                st.session_state.hp = 5
-            else:
-                st.session_state.difficulty = "NORMAL"
-                st.session_state.max_value = 100
-                st.session_state.hp = 7
-                
-            st.session_state.nickname = nickname
-            st.session_state.secret_number = random.randint(1, st.session_state.max_value)
-            st.session_state.attempts = 0
-            st.session_state.history = [] 
-            
-            st.session_state.current_min = 1
-            st.session_state.current_max = st.session_state.max_value
-            
-            st.session_state.game_started = True
-            st.session_state.game_over = False
-            st.session_state.is_clear = False
-            st.session_state.message = f"SYSTEM: [{nickname}] Initialized! HP Status: {'❤️' * st.session_state.hp}"
+            diff_settings = {"🟢 EASY": ("EASY", 50, 10), "🔵 NORMAL": ("NORMAL", 100, 7), "🔴 HELL": ("HELL", 1000, 5)}
+            d = next((v for k, v in diff_settings.items() if k in selected_diff), ("NORMAL", 100, 7))
+            st.session_state.difficulty, st.session_state.max_value, st.session_state.hp = d
+            st.session_state.nickname, st.session_state.secret_number = nickname, random.randint(1, d[1])
+            st.session_state.attempts, st.session_state.history = 0, []
+            st.session_state.current_min, st.session_state.current_max = 1, d[1]
+            st.session_state.game_started, st.session_state.game_over, st.session_state.is_clear = True, False, False
             st.rerun()
-            
+
+    # Ranking Table
     st.divider()
     st.subheader("🏆 HALL OF FAME 🏆")
-    
-    tab1, tab2, tab3 = st.tabs(["🟢 EASY", "🔵 NORMAL", "🔴 HELL"])
+    tabs = st.tabs(["🟢 EASY", "🔵 NORMAL", "🔴 HELL"])
     all_rankings = load_ranking()
-    
-    with tab1:
-        easy_top3 = get_top_3_by_difficulty(all_rankings, "EASY")
-        if easy_top3:
-            for i, record in enumerate(easy_top3):
-                st.write(f"**[RANK {i+1}]** {record['nickname']} (Score: {record['attempts']} TRIES)")
-        else:
-            st.caption("NO DATA AVAILABLE.")
-            
-    with tab2:
-        normal_top3 = get_top_3_by_difficulty(all_rankings, "NORMAL")
-        if normal_top3:
-            for i, record in enumerate(normal_top3):
-                st.write(f"**[RANK {i+1}]** {record['nickname']} (Score: {record['attempts']} TRIES)")
-        else:
-            st.caption("NO DATA AVAILABLE.")
-            
-    with tab3:
-        hard_top3 = get_top_3_by_difficulty(all_rankings, "HELL")
-        if hard_top3:
-            for i, record in enumerate(hard_top3):
-                st.write(f"**[RANK {i+1}]** {record['nickname']} (Score: {record['attempts']} TRIES)")
-        else:
-            st.caption("NO DATA AVAILABLE.")
+    for i, diff in enumerate(["EASY", "NORMAL", "HELL"]):
+        with tabs[i]:
+            for r in get_top_3_by_difficulty(all_rankings, diff):
+                st.write(f"**[RANK]** {r['nickname']} ({r['attempts']} TRIES)")
 
-# ==========================================
-# Phase 2: In-Game Screen
-# ==========================================
-if st.session_state.game_started and not st.session_state.game_over:
-    st.success(st.session_state.message)
-    
-    # Radar Bar Rendering
+elif st.session_state.game_started and not st.session_state.game_over:
     left_pct = ((st.session_state.current_min - 1) / st.session_state.max_value) * 100
     width_pct = ((st.session_state.current_max - st.session_state.current_min + 1) / st.session_state.max_value) * 100
-    
-    radar_html = f"""
-    <div style="margin: 20px 0 30px 0;">
-        <p style="text-align: center; font-family: 'NeoDunggeunmo'; color: #fdfa72; font-size: 1.2rem; margin-bottom: 8px;">▶ TARGET RADAR ◀</p>
-        <div style="width: 100%; height: 35px; background-color: #27272a; border: 2px solid #52525b; border-radius: 6px; position: relative; overflow: hidden;">
-            <div style="
-                position: absolute;
-                left: {left_pct}%;
-                width: {width_pct}%;
-                height: 100%;
-                background-color: #34d399;
-                box-shadow: 0 0 15px rgba(52, 211, 153, 0.8);
-                transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 0 10px;
-                box-sizing: border-box;
-            ">
-                <span style="color: #18181b; font-weight: bold; font-family: 'NeoDunggeunmo'; font-size: 1.1rem;">{st.session_state.current_min}</span>
-                <span style="color: #18181b; font-weight: bold; font-family: 'NeoDunggeunmo'; font-size: 1.1rem;">{st.session_state.current_max}</span>
-            </div>
-        </div>
+    st.markdown(f"""
+    <div style="width: 100%; height: 35px; background-color: #27272a; border: 2px solid #52525b; border-radius: 6px; position: relative;">
+        <div style="position: absolute; left: {left_pct}%; width: {width_pct}%; height: 100%; background-color: #34d399; box-shadow: 0 0 15px #34d399;"></div>
     </div>
-    """
-    st.markdown(radar_html, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        input_mode = st.radio(
-            "▶ CONTROLLER TYPE",
-            ["⌨️ KEYBOARD", "📱 JOYSTICK(SLIDER)"],
-            horizontal=True
-        )
-        st.write("") 
-        
-        if input_mode == "⌨️ KEYBOARD":
-            guess = st.number_input(f"TARGET (1~{st.session_state.max_value}):", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2), step=1)
+    guess = st.number_input("TARGET:", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2))
+    if st.button("ATTACK"):
+        if guess in st.session_state.history: st.warning("⚠️ Already guessed this!")
         else:
-            guess = st.slider(f"TARGET (1~{st.session_state.max_value}):", min_value=1, max_value=st.session_state.max_value, value=int(st.session_state.max_value/2))
-        st.write("") 
-        
-        btn_col1, btn_col2 = st.columns(2)
-        
-        with btn_col1:
-            if st.button("ATTACK"):
-                st.session_state.attempts += 1
-                st.session_state.history.append(guess)
-                
-                if guess < st.session_state.secret_number:
-                    st.session_state.current_min = max(st.session_state.current_min, guess + 1)
-                    st.session_state.hp -= 1
-                    if st.session_state.hp <= 0:
-                        st.session_state.message = f"💀 GAME OVER 💀 HP reduced to 0... The core target was [{st.session_state.secret_number}]!"
-                        st.session_state.game_over = True
-                        st.session_state.is_clear = False
-                    else:
-                        st.session_state.message = f"🔺 UP!! Aim higher than [{guess}]. (Remaining HP: {'❤️' * st.session_state.hp})"
-                    st.rerun()
-                    
-                elif guess > st.session_state.secret_number:
-                    st.session_state.current_max = min(st.session_state.current_max, guess - 1)
-                    st.session_state.hp -= 1
-                    if st.session_state.hp <= 0:
-                        st.session_state.message = f"💀 GAME OVER 💀 HP reduced to 0... The core target was [{st.session_state.secret_number}]!"
-                        st.session_state.game_over = True
-                        st.session_state.is_clear = False
-                    else:
-                        st.session_state.message = f"🔻 DOWN!! Aim lower than [{guess}]. (Remaining HP: {'❤️' * st.session_state.hp})"
-                    st.rerun()
-                    
-                else:
-                    st.session_state.message = f"🎉 MISSION CLEAR! Target: {st.session_state.secret_number} / Score: {st.session_state.attempts} Tries"
-                    st.session_state.game_over = True
-                    st.session_state.is_clear = True 
-                    insert_ranking(st.session_state.nickname, st.session_state.attempts, st.session_state.difficulty)
-                    st.rerun()
-                    
-        with btn_col2:
-            if st.button("RESTART"):
-                st.session_state.secret_number = random.randint(1, st.session_state.max_value)
-                st.session_state.attempts = 0
-                st.session_state.history = []
-                st.session_state.current_min = 1
-                st.session_state.current_max = st.session_state.max_value
-                
-                if st.session_state.difficulty == "EASY":
-                    st.session_state.hp = 10
-                elif st.session_state.difficulty == "HELL":
-                    st.session_state.hp = 5
-                else:
-                    st.session_state.hp = 7
-                    
-                st.session_state.message = f"SYSTEM: Stage Reset. (Remaining HP: {'❤️' * st.session_state.hp})"
-                st.rerun()
-                
-    with col2:
-        st.subheader("📝 COMBAT LOG")
-        if st.session_state.history:
-            for idx, num in enumerate(st.session_state.history):
-                st.write(f"[Turn {idx+1}] Guess: **{num}**")
-        else:
-            st.caption("Standby...")
-            
-        if st.session_state.nickname == "KimJunSeok":
-            st.markdown(f"<div style='text-align: right; color: #f472b6; font-size: 0.85rem; margin-top: 30px;'>[DEBUG] Target: {st.session_state.secret_number}</div>", unsafe_allow_html=True)
-
-# ==========================================
-# Phase 3: Game Over / Scoreboard Screen
-# ==========================================
-if st.session_state.game_over:
-    if st.session_state.is_clear:
-        st.markdown("""
-            <div class="arcade-clear-banner">
-                <p class="arcade-clear-text">STAGE CLEAR</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    st.warning(st.session_state.message)
-    st.info(f"▶ LOG DATA: {', '.join(map(str, st.session_state.history))}")
-    
-    st.divider()
-    st.subheader(f"🏆 {st.session_state.difficulty} RANKING 🏆")
-    
-    all_rankings = load_ranking()
-    current_top3 = get_top_3_by_difficulty(all_rankings, st.session_state.difficulty)
-    
-    for i, record in enumerate(current_top3):
-        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-        st.write(f"**{medal} RANK {i+1}:** {record['nickname']} ({record['attempts']} TRIES)")
-
-    st.divider()
-    
-    if st.button("CONTINUE? (Insert Coin)"):
-        st.session_state.game_started = False
-        st.rerun()
-
-
-# ==========================================
-# Phase 4: Guest Book Section
-# ==========================================
-st.divider()
-st.subheader("💬 GUEST BOOK")
-
-with st.form("chat_form", clear_on_submit=True):
-    if st.session_state.game_started:
-        author_name = st.session_state.nickname
-        st.text(f"ID: {author_name} (PLAYING)")
-    else:
-        author_name = st.text_input("ID:", max_chars=10, placeholder="Your Nickname")
-
-    chat_message = st.text_input("MESSAGE:", max_chars=100, placeholder="Type your arcade transmission message...")
-    submit_btn = st.form_submit_button("ENTER")
-
-    if submit_btn:
-        if not author_name.strip():
-            st.error("ERROR: ID cannot be empty.")
-        elif not chat_message.strip():
-            st.error("ERROR: Message cannot be empty.")
-        else:
-            insert_chat(author_name, chat_message)
+            st.session_state.attempts += 1
+            st.session_state.history.append(guess)
+            if guess == st.session_state.secret_number:
+                st.session_state.game_over, st.session_state.is_clear = True, True
+                insert_ranking(st.session_state.nickname, st.session_state.attempts, st.session_state.difficulty)
+            elif st.session_state.attempts >= 10 and st.session_state.difficulty == "HELL": st.session_state.game_over = True
+            elif guess < st.session_state.secret_number: st.session_state.current_min = max(st.session_state.current_min, guess + 1)
+            else: st.session_state.current_max = min(st.session_state.current_max, guess - 1)
+            st.session_state.hp -= 1
+            if st.session_state.hp <= 0: st.session_state.game_over = True
             st.rerun()
 
-saved_chats = load_chat()
-if saved_chats:
-    for chat in reversed(saved_chats[-10:]):
-        st.write(f"**[{chat['name']}]** > {chat['msg']}")
-else:
-    st.caption("No transmissions available.")
+elif st.session_state.game_over:
+    if st.session_state.is_clear: st.markdown('<div class="arcade-clear-banner"><p class="arcade-clear-text">STAGE CLEAR</p></div>', unsafe_allow_html=True)
+    st.code(f"I cleared Up & Down Arcade [{st.session_state.difficulty}] in {st.session_state.attempts} TRIES!\nhttps://junseok-ver01.streamlit.app/", language="markdown")
+    if st.button("CONTINUE?"): st.session_state.game_started = False; st.rerun()
+
+# Guest Book
+st.divider()
+st.subheader("💬 GUEST BOOK")
+with st.form("chat_form", clear_on_submit=True):
+    name = st.text_input("ID:")
+    msg = st.text_input("MESSAGE:")
+    if st.form_submit_button("ENTER"): insert_chat(name, msg); st.rerun()
+for chat in reversed(load_chat()[-5:]): st.write(f"**[{chat['name']}]** > {chat['msg']}")
+
+# Final Donation Section
+st.divider()
+st.markdown("""
+<div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+    <p style="color: #a1a1aa; font-family: 'Pretendard', sans-serif; font-size: 0.9rem;">Did you enjoy the game? Support the arcade!</p>
+    <div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;">
+        <a href="https://ko-fi.com/junseokkim" target="_blank" class="donate-btn" style="background-color: #f472b6; color: #ffffff;">☕ KO-FI</a>
+        <a href="https://toss.me/여기에_토스아이디" target="_blank" class="donate-btn" style="background-color: #3b82f6; color: #ffffff;">💙 TOSS</a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
