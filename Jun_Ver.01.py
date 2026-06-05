@@ -48,7 +48,6 @@ def insert_chat(name, msg):
         pass
 
 def get_top_3_by_difficulty(ranking_list, diff_name):
-    # Compatibility mapping for existing Korean DB records
     mapping = {
         "EASY": ["EASY", "쉬움"],
         "NORMAL": ["NORMAL", "보통"],
@@ -264,6 +263,14 @@ if not st.session_state.game_started:
                 st.write(f"**[RANK]** {r['nickname']} ({r['attempts']} TRIES)")
 
 elif st.session_state.game_started and not st.session_state.game_over:
+    # 📌 수정된 부분: MIN/MAX 표시
+    st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; font-family: 'NeoDunggeunmo', sans-serif; color: #34d399; font-size: 1.2rem; margin-bottom: 10px;">
+        <span>MIN: {st.session_state.current_min}</span>
+        <span>MAX: {st.session_state.current_max}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
     left_pct = ((st.session_state.current_min - 1) / st.session_state.max_value) * 100
     width_pct = ((st.session_state.current_max - st.session_state.current_min + 1) / st.session_state.max_value) * 100
     st.markdown(f"""
