@@ -4,46 +4,59 @@ import random
 from supabase import create_client, Client
 
 # ==========================================
-# 💾 Cloud DB (Supabase) Connection
+# 💾 Cloud DB (Supabase) Connection (방어형 코드로 강화!)
 # ==========================================
 @st.cache_resource
 def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+    except Exception:
+        return None
 
-supabase = init_connection()
+def get_supabase():
+    # 필요할 때마다 연결 상태를 확인하고 가져옵니다.
+    return init_connection()
 
 def load_ranking():
     try:
-        response = supabase.table("ranking").select("*").execute()
+        db = get_supabase()
+        if not db: return []
+        response = db.table("ranking").select("*").execute()
         return response.data
     except Exception:
         return []
 
 def insert_ranking(nickname, attempts, difficulty):
     try:
-        supabase.table("ranking").insert({
-            "nickname": nickname, 
-            "attempts": attempts, 
-            "difficulty": difficulty
-        }).execute()
+        db = get_supabase()
+        if db:
+            db.table("ranking").insert({
+                "nickname": nickname, 
+                "attempts": attempts, 
+                "difficulty": difficulty
+            }).execute()
     except Exception:
         pass
 
 def load_chat():
     try:
-        response = supabase.table("chat").select("*").order("created_at", desc=False).execute()
+        db = get_supabase()
+        if not db: return []
+        response = db.table("chat").select("*").order("created_at", desc=False).execute()
         return response.data
     except Exception:
         return []
 
 def insert_chat(name, msg):
     try:
-        supabase.table("chat").insert({
-            "name": name, 
-            "msg": msg
-        }).execute()
+        db = get_supabase()
+        if db:
+            db.table("chat").insert({
+                "name": name, 
+                "msg": msg
+            }).execute()
     except Exception:
         pass
 
